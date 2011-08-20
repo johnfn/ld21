@@ -33,6 +33,28 @@ def and_fn(bools):
 def or_fn(bools):
   return True in bools
 
+class Image:
+  def __init__(self, src_file, src_x, src_y, dst_x, dst_y):
+    self.old_values = (src_file, src_x, src_y)
+
+    self.img = TileSheet.get(*self.old_values)
+    self.rect = self.img.get_rect()
+
+    self.rect.x = dst_x
+    self.rect.y = dst_y
+
+  def render(self, screen):
+    screen.blit(self.img, self.rect)
+
+  # TODO
+  def update(self, src_file, src_x, src_y):
+    new_values = (src_file, src_x, src_y)
+    if new_values == self.old_values:
+      return
+
+    self.old_values = new_values
+    self.img = TileSheet.get(*self.old_values)
+
 class TileSheet:
   """ Memoize all the sheets so we don't load in 1 sheet like 50 times and 
   squander resources. This is a singleton, which is generally frowned upon, 
@@ -72,7 +94,7 @@ class Map:
   def parse(self, coords, rgb_triple):
     if rgb_triple == (255, 0, 0): # Enemy
       self.current_map.set_at(coords, NOTHING_COLOR)
-      print "omg an enemy at", coords
+      Updater.add_updater(Enemy(coords, self.char))
 
   #got to update with abs
   def update_map(self, x, y, pos_abs=False):
@@ -113,7 +135,8 @@ class Map:
     elif data_piece == (0,0,0):
       return TileSheet.get("wall.png", 1, 0)
 
-  def __init__(self, file_name, coords):
+  def __init__(self, file_name, coords, char):
+    self.char = char
     self.file_name = file_name
     self.map_coords = coords
 
@@ -280,6 +303,21 @@ class Dialog:
     screen.blit(rendered_text, my_rect.topleft)
     return True
 
+class Enemy:
+  # coords: location of enemy
+  def __init__(self, coords, char):
+    new_coords = [coords[0] * TILE_SIZE, coords[1] * TILE_SIZE]
+    self.sprite = Image("wall.png", 0, 1, *new_coords)
+
+  def depth(self):
+    return 0
+
+  def update(self):
+    return True
+
+  def render(self, screen):
+    self.sprite.render(screen)
+
 class HoverText:
   # follow must expose x, y (could generalize to enemies etc)
   def __init__(self, text, follow, depth=0):
@@ -306,28 +344,6 @@ class HoverText:
     rendered_text = render_textrect(self.text, my_font, my_rect, (10, 10, 10), (255, 255, 255), 0)
 
     screen.blit(rendered_text, my_rect.topleft)
-
-class Image:
-  def __init__(self, src_file, src_x, src_y, dst_x, dst_y):
-    self.old_values = (src_file, src_x, src_y)
-
-    self.img = TileSheet.get(*self.old_values)
-    self.rect = self.img.get_rect()
-
-    self.rect.x = dst_x
-    self.rect.y = dst_y
-
-  def render(self, screen):
-    screen.blit(self.img, self.rect)
-
-  # TODO
-  def update(self, src_file, src_x, src_y):
-    new_values = (src_file, src_x, src_y)
-    if new_values == self.old_values:
-      return
-
-    self.old_values = new_values
-    self.img = TileSheet.get(*self.old_values)
 
 class HUD:
   def __init__(self, follow):
@@ -392,8 +408,8 @@ class Game:
 
     TileSheet.add("wall.png")
 
-    self.map = Map("map.png", [0, 0])
     self.char = Character(40, 40)
+    self.map = Map("map.png", [0, 0], self.char)
 
     if DEBUG:
       self.state = States.Normal
