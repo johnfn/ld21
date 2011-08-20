@@ -106,6 +106,12 @@ class Map:
 
   #got to update with abs
   def update_map(self, x, y, pos_abs=False):
+    if x == 0 and y == 0 and not pos_abs: return # Don't bother.
+
+    # Remove old enemies
+
+    Updater.remove_all(Enemy)
+
     if pos_abs:
       self.map_coords[0] = x
       self.map_coords[1] = y
@@ -363,7 +369,6 @@ class Enemy:
         self.y += min_abs(sign(dest.y - self.y) * self.speed, dest.x - self.x)
 
     self.sprite.move(self.x, self.y)
-    print self.x, self.y
     return True
 
   def render(self, screen):
@@ -444,6 +449,10 @@ class Updater:
 
     for item in items_sorted:
       item.render(screen)
+
+  @staticmethod
+  def remove_all(some_type):
+    Updater.items = [item for item in Updater.items if not isinstance(item, some_type)]
 
 class States:
   Dialog = "Dialog"
