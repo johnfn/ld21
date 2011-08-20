@@ -58,9 +58,10 @@ class Map:
   def in_bounds(self, x, y):
     return x >= 0 and y >= 0 and x < self.size and y < self.size
 
+  # Would a character at (x, y) be in bounds?
   def in_bounds_abs(self, x, y):
     return x >= 0 and y >= 0 and\
-        x < TILE_SIZE * self.size and y < TILE_SIZE * self.size
+        x < TILE_SIZE * (self.size - 1) and y < TILE_SIZE * (self.size - 1)
 
   def is_wall(self, x, y):
     if not self.in_bounds(y, x): return False
@@ -163,8 +164,8 @@ class Character:
       game_map.update_map((self.x + dx)/(ABS_MAP_SIZE - TILE_SIZE),\
                           (self.y + dy)/(ABS_MAP_SIZE - TILE_SIZE), False)
 
-      self.x += -((self.x + dx)/(ABS_MAP_SIZE - TILE_SIZE)) * ABS_MAP_SIZE
-      self.y += -((self.y + dy)/(ABS_MAP_SIZE - TILE_SIZE)) * ABS_MAP_SIZE
+      self.x += -((self.x + dx)/(ABS_MAP_SIZE - TILE_SIZE)) * (ABS_MAP_SIZE - TILE_SIZE)
+      self.y += -((self.y + dy)/(ABS_MAP_SIZE - TILE_SIZE)) * (ABS_MAP_SIZE - TILE_SIZE)
 
     self.x += dx
     while Character.touching_wall(self.x, self.y, game_map):
@@ -331,7 +332,6 @@ class HUD:
         self.hearts[x].update("wall.png", 2, 0)
       else:
         self.hearts[x].update("wall.png", 3, 0)
-
 
     return True # never destroy
 
