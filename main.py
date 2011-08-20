@@ -372,10 +372,21 @@ class Dialog:
     screen.blit(rendered_text, my_rect.topleft)
     return True
 
+def cmp_eps(x, y):
+  return abs(x-y) < .00001
+
 class Point:
   def __init__(self, x, y):
     self.x = x
     self.y = y
+
+  def __str__(self):
+    return "<Point x : %2f y : %2f>" % (self.x, self.y)
+
+  def is_simple(self):
+    if cmp_eps(self.x, 0) and cmp_eps(self.y, 0): return False
+    return (cmp_eps(self.x, 0) or cmp_eps(self.x, 1) or cmp_eps(self.x, -1)) and\
+           (cmp_eps(self.y, 0) or cmp_eps(self.y, 1) or cmp_eps(self.y, -1))
 
 # When you touch this, you start a dialog.
 class DialogStarter:
@@ -433,37 +444,36 @@ class Rotator:
     self.sprite.render(screen)
 
 class Enemy:
-  # coords: location of enemy
-  Waiting = 0
-  Moving = 1
-
-  Ticks = [40, 80]
-
 
   # TODO: Rewriting this entire thing in terms of dirs and times.
   # Example: {move: [1, 0], time: 60}, {move: [-1, 0], time: 60}
 
-  def __init__(self, coords, char):
+  def __init__(self, coords, char, orders=None):
     # Tweakable
     self.speed = 3
     self.los_dist = 3 # line of sight range
+    self.turnaround_time = 20 # (TODO) Ignoring this for now, see update
 
     # Not tweakable
     self.char = char
 
+    if orders is None:
+      self.orders = [ {'move': Point(-1, 0), 'time': 60}
+                    , {'move': Point( 1, 0), 'time': 60}
+                    ]
+    else:
+      self.orders = orders
+
+    self.which_order = 0
+
     self.move_dir = Point(-1, 0)
-
     new_coords = [coords[0] * TILE_SIZE, coords[1] * TILE_SIZE]
-    self.sprite = Image("wall.png", 0, 1, *new_coords)
-    self.state = Enemy.Waiting
-    self.state_ticks_left = Enemy.Ticks[self.state]
 
+    self.sprite = Image("wall.png", 0, 1, *new_coords)
     self.los = [Image("wall.png", 3, 1, *(0, 0)) for x in range(self.los_dist)]
+    self.ticks = 0
 
     # Could have many destinations
-    other_destination = Point(new_coords[0] + 100, new_coords[1])
-    self.destinations = [Point(new_coords[0], new_coords[1]), other_destination]
-    self.current_destination = 0
 
     self.x = new_coords[0]
     self.y = new_coords[1]
@@ -481,24 +491,24 @@ class Enemy:
     return False
 
   def update(self):
-    self.state_ticks_left -= 1
-    if self.state_ticks_left < 0:
-      self.state = 1 - self.state # flip state
-      self.state_ticks_left = Enemy.Ticks[self.state]
+    rotating = False
 
-      if self.state == Enemy.Moving:
-        # Advance to next destination
-        self.current_destination = (self.current_destination + 1) % len(self.destinations)
-        self.move_dir.x *= -1
-        self.move_dir.y *= -1
+    # Is it all whole numbers
+    if self.move_dir.is_simple():
+      self.x += self.move_dir.x
+      self.y += self.move_dir.y
+      self.ticks += 1
 
-    # Move towards destination
-    if self.state == Enemy.Moving:
-      dest = self.destinations[self.current_destination]
-      if self.x != dest.x:
-        self.x += min_abs(sign(dest.x - self.x) * self.speed, dest.x - self.x)
-      if self.y != dest.y:
-        self.y += min_abs(sign(dest.y - self.y) * self.speed, dest.x - self.x)
+      if self.ticks > self.orders[self.which_order]['time']: 
+        # Advance to next order
+        self.which_order = (self.which_order + 1) % len(self.orders)
+        rotating = True
+        self.ticks = 0
+
+    if not self.move_dir.is_simple() or rotating:
+      goal = self.orders[self.which_order]['move']
+      self.move_dir.x += sign(goal.x - self.move_dir.x) * float(.1)
+      self.move_dir.y += sign(goal.y - self.move_dir.y) * float(.1)
 
     self.sprite.move(self.x, self.y)
     return True
