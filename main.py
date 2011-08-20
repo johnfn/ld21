@@ -108,6 +108,9 @@ class Map:
     if rgb_triple == (0, 255, 0): # Rotator
       self.current_map.set_at(coords, NOTHING_COLOR)
       Updater.add_updater(Rotator(coords))
+    if rgb_triple == (255, 255, 0): # Treasure
+      self.current_map.set_at(coords, NOTHING_COLOR)
+      # TODO
 
   #got to update with abs
   def update_map(self, x, y, pos_abs=False):
@@ -168,7 +171,7 @@ class Map:
 
     TileSheet.add(file_name)
 
-    self.update_map(0, 0, True)
+    self.update_map(*self.map_coords, pos_abs=True)
 
   def render(self, screen):
     """ Render the map """
@@ -187,6 +190,8 @@ class Character:
     self.y = y
     self.vx = 0
     self.vy = 0
+
+    self.has_enemy_escape = False
 
     self.health = 2
     self.max_health = 3
@@ -250,8 +255,14 @@ class Character:
 
     # Flip code <ESC>
 
-    target = Updater.get_escape(self)
+    target = Updater.get_escape()
+    if target is None: 
+      # No escaper found in this map.
+      if UpKeys.key_up(27):
+        Updater.add_updater(HoverText("I can't.", self, 0))
 
+      return
+    
     self.ghost.move(target.x * 2 - self.x, self.y)
     if UpKeys.key_up(27):
       new_x = target.x * 2 - self.x
@@ -266,7 +277,9 @@ class Character:
     self.rect.y = self.y
 
     screen.blit(self.img, self.rect)
-    self.ghost.render(screen)
+
+    if Updater.get_escape() is not None:
+      self.ghost.render(screen)
 
 class UpKeys:
   """ Simple abstraction to check for recent key released behavior. """
@@ -376,6 +389,8 @@ class Enemy:
     self.speed = 3
 
     # Not tweakable
+    self.char = char
+
     new_coords = [coords[0] * TILE_SIZE, coords[1] * TILE_SIZE]
     self.sprite = Image("wall.png", 0, 1, *new_coords)
     self.state = Enemy.Waiting
@@ -397,7 +412,9 @@ class Enemy:
     return 0
 
   def escape(self):
-    return Point(self.x, self.y)
+    if self.char.has_enemy_escape:
+      return Point(self.x, self.y)
+    return False
 
   def update(self):
     self.state_ticks_left -= 1
@@ -500,13 +517,11 @@ class Updater:
       item.render(screen)
 
   @staticmethod
-  def get_escape(char):
+  def get_escape():
     for item in Updater.items:
       if hasattr(item, 'escape'):
-        return item
-
-    # No escaper found in this map.
-    Updater.add_updater(HoverText("I can't.", char, 0))
+        if item.escape():
+          return item
 
   @staticmethod
   def remove_all(fn):
@@ -531,11 +546,12 @@ class Game:
     TileSheet.add("wall.png")
 
     self.char = Character(40, 40)
-    self.map = Map("map.png", [0, 0], self.char)
 
     if DEBUG:
+      self.map = Map("map.png", [2, 0], self.char)
       self.state = States.Normal
     else:
+      self.map = Map("map.png", [0, 0], self.char)
       self.state = States.Dialog
       Dialog.start_dialog("initial")
 
