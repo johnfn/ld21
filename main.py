@@ -640,6 +640,12 @@ class Replicated:
         self.vy = 0
         break
 
+    enemy_deaths = Updater.get_all(lambda obj: isinstance(obj, Enemy) and generic_touching(self, obj))
+
+    for enemy in enemy_deaths:
+      enemy.damage(1)
+      self.age = 150 #TODO: Nice animation?
+
     # finally
     self.sprite.move(self.x, self.y)
 
@@ -675,12 +681,15 @@ class Enemy:
 
   def __init__(self, coords, char, orders=None):
     # Tweakable
+    self.health = 1
     self.speed = 3
     self.los_dist = 3 # line of sight range
     self.turnaround_time = 20 # (TODO) Ignoring this for now, see update
 
     # Not tweakable
+    self.flicker_ticker = None
     self.char = char
+    self.visible = True
 
     if orders is None:
       self.orders = [ {'move': Point(-1, 0), 'time': 60}
@@ -703,6 +712,9 @@ class Enemy:
     self.x = new_coords[0]
     self.y = new_coords[1]
 
+  def damage(self, amount):
+    self.health -= amount
+
   # Stored between maps?
   def cacheable(self):
     pass
@@ -717,6 +729,13 @@ class Enemy:
 
   def update(self):
     rotating = False
+
+    if self.health <= 0 and self.flicker_ticker == None:
+      self.flicker_ticker = 50
+
+    if self.flicker_ticker != None:
+      self.visible = (self.flicker_ticker % 3 == 0)
+      return self.flicker_ticker > 0
 
     # TODO: Include this object too, not just its sight range
     for eyesight in (self.los + [self]):
@@ -744,11 +763,12 @@ class Enemy:
     return True
 
   def render(self, screen):
-    self.sprite.render(screen)
+    if self.visible:
+      self.sprite.render(screen)
 
-    for l_dist in range(1, self.los_dist + 1): #+ 1 so that we don't overlap with self
-      self.los[l_dist - 1].move(self.x + TILE_SIZE * l_dist * self.move_dir.x, self.y + TILE_SIZE * l_dist * self.move_dir.y)
-      self.los[l_dist - 1].render(screen)
+      for l_dist in range(1, self.los_dist + 1): #+ 1 so that we don't overlap with self
+        self.los[l_dist - 1].move(self.x + TILE_SIZE * l_dist * self.move_dir.x, self.y + TILE_SIZE * l_dist * self.move_dir.y)
+        self.los[l_dist - 1].render(screen)
 
 class HoverText:
   # follow must expose x, y (could generalize to enemies etc)
