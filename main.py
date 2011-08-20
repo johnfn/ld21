@@ -120,9 +120,12 @@ class Map:
     if rgb_triple == (255, 255, 0): # Treasure
       self.current_map.set_at(coords, NOTHING_COLOR)
       # TODO
-    if rgb_triple == (150,90,60):
+    if rgb_triple == (150,90,60): # Dialog
       self.current_map.set_at(coords, NOTHING_COLOR)
       Updater.add_updater(DialogStarter(coords, self.char, rgb_triple, self.map_coords))
+    if rgb_triple == (0,0,255): # Stairs
+      self.current_map.set_at(coords, NOTHING_COLOR)
+      Updater.add_updater(Stairs(coords))
 
   #got to update with abs
   def update_map(self, x, y, pos_abs=False):
@@ -242,9 +245,14 @@ class Character:
     """ Move the character one tick. """
     new_screen = False
 
+
+    on_stairs = len(Updater.get_all(lambda obj: isinstance(obj, Stairs) and self.touching_item(obj))) > 0
+
     # Movement code
 
     self.vy += 1
+    if on_stairs:
+      self.vy = (keys[pygame.K_s] - keys[pygame.K_w]) * self.speed
 
     jumping = False
 
@@ -494,6 +502,26 @@ class Rotator:
   def render(self, screen):
     self.sprite.render(screen)
 
+class Stairs:
+  def __init__(self, coords):
+    self.coords = coords
+    self.x, self.y = [x * TILE_SIZE for x in coords]
+
+    self.sprite = Image("wall.png", 0, 2, self.x, self.y)
+
+  def depth(self):
+    return 0
+
+  # STAIRS NEVER DIE.
+  def update(self):
+    return True
+
+  def cacheable(self):
+    pass
+
+  def render(self, screen):
+    self.sprite.render(screen)
+
 class Enemy:
   # Example: {move: [1, 0], time: 60}, {move: [-1, 0], time: 60}
 
@@ -694,7 +722,7 @@ class Game:
     Dialog.begin(self)
 
     if DEBUG:
-      self.map = Map("map.png", [2, 0], self.char)
+      self.map = Map("map.png", [2, 1], self.char)
       self.state = States.Normal
     else:
       self.map = Map("map.png", [0, 0], self.char)
