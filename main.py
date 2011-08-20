@@ -237,7 +237,9 @@ class Character:
     # Flip code <ESC>
 
     if UpKeys.key_up(27):
-      new_x = ABS_MAP_SIZE - self.x
+      target = Updater.get_escape(self)
+
+      new_x = target.x * 2 - self.x
       new_y = self.y
       if Character.touching_wall(new_x, self.y, game_map):
         Updater.add_updater(HoverText("I can't go there!", self, 0))
@@ -350,6 +352,9 @@ class Enemy:
   def depth(self):
     return 0
 
+  def escape(self):
+    return Point(self.x, self.y)
+
   def update(self):
     self.state_ticks_left -= 1
     if self.state_ticks_left < 0:
@@ -449,6 +454,15 @@ class Updater:
 
     for item in items_sorted:
       item.render(screen)
+
+  @staticmethod
+  def get_escape(char):
+    for item in Updater.items:
+      if hasattr(item, 'escape'):
+        return item
+
+    # No escaper found in this map.
+    Updater.add_updater(HoverText("I can't.", char, 0))
 
   @staticmethod
   def remove_all(some_type):
