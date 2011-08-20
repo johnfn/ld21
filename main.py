@@ -2,6 +2,8 @@ import sys, pygame, time
 import spritesheet
 from wordwrap import render_textrect
 
+DEBUG = True
+
 WALLS = [(0,0,0)]
 TILE_SIZE = 20
 MAP_SIZE = 20
@@ -214,21 +216,23 @@ class Dialog:
   @staticmethod
   def update(screen):
     if UpKeys.key_up(pygame.K_RETURN):
-      Dialog.next_dialog()
+      if not Dialog.next_dialog():
+        return False
 
-    Dialog.show_dialog(screen)
+    return Dialog.show_dialog(screen)
 
   @staticmethod
   def start_dialog(speaker):
     Dialog.speaker = speaker
     Dialog.position = 0
+    return True
 
   @staticmethod
   def next_dialog():
     """ Return True if successful, False if dialog over."""
     Dialog.position += 1 
 
-    if Dialog.position > len(Dialog.all_dialog[Dialog.speaker]):
+    if Dialog.position == len(Dialog.all_dialog[Dialog.speaker]):
       Dialog.position = 0
       return False
 
@@ -244,6 +248,7 @@ class Dialog:
     rendered_text = render_textrect(dialog, my_font, my_rect, (10, 10, 10), (210, 255, 255), 0)
 
     screen.blit(rendered_text, my_rect.topleft)
+    return True
 
 class States:
   Dialog = "Dialog"
@@ -279,7 +284,8 @@ class Game:
       self.char.render(self.screen)
 
       if self.state == States.Dialog:
-        Dialog.update(self.screen)
+        if not Dialog.update(self.screen):
+          self.state = States.Normal
       elif self.state == States.Normal:
         self.char.update(pygame.key.get_pressed(), self.map)
 
