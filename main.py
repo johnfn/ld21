@@ -1,4 +1,5 @@
 import sys, pygame, time
+import random
 import spritesheet
 from wordwrap import render_textrect
 
@@ -310,6 +311,10 @@ class Character:
     self.health -= damage
 
     self.flicker()
+
+    message = random.choice(["Ouch!", "Ow!", "Yowch!", "Oof!"])
+    Updater.add_updater(HoverText(message, self, 0))
+
     if dmg_type == "enemy":
       self.x = self.restore_x
       self.y = self.restore_y
@@ -696,7 +701,6 @@ class Game:
       self.state = States.Dialog
       Dialog.start_dialog((0, 0))
 
-    Updater.add_updater(HoverText("Sup?", self.char, 0))
     Updater.add_updater(HUD(self.char))
 
   def loop(self):
