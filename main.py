@@ -26,6 +26,11 @@ def sign(x):
   if x < 0: return -1
   return 0
 
+def min_abs(x, y):
+  if abs(x) < abs(y): 
+    return x
+  return y
+
 """ I think way too functionally for my own good. """
 def and_fn(bools):
   return not False in bools
@@ -46,7 +51,10 @@ class Image:
   def render(self, screen):
     screen.blit(self.img, self.rect)
 
-  # TODO
+  def move(self, new_x, new_y):
+    self.rect.x = new_x
+    self.rect.y = new_y
+
   def update(self, src_file, src_x, src_y):
     new_values = (src_file, src_x, src_y)
     if new_values == self.old_values:
@@ -303,16 +311,59 @@ class Dialog:
     screen.blit(rendered_text, my_rect.topleft)
     return True
 
+class Point:
+  def __init__(self, x, y):
+    self.x = x
+    self.y = y
+
 class Enemy:
   # coords: location of enemy
+  Waiting = 0
+  Moving = 1
+
+  Ticks = [40, 80]
+
   def __init__(self, coords, char):
+    # Tweakable
+    self.speed = 3
+
+    # Not tweakable
     new_coords = [coords[0] * TILE_SIZE, coords[1] * TILE_SIZE]
     self.sprite = Image("wall.png", 0, 1, *new_coords)
+    self.state = Enemy.Waiting
+    self.state_ticks_left = Enemy.Ticks[self.state]
+
+    # Could have many destinations
+    other_destination = Point(new_coords[0] + 100, new_coords[1])
+    self.destinations = [Point(new_coords[0], new_coords[1]), other_destination]
+    self.current_destination = 0
+
+    self.x = new_coords[0]
+    self.y = new_coords[1]
 
   def depth(self):
     return 0
 
   def update(self):
+    self.state_ticks_left -= 1
+    if self.state_ticks_left < 0:
+      self.state = 1 - self.state # flip state
+      self.state_ticks_left = Enemy.Ticks[self.state]
+
+      if self.state == Enemy.Moving:
+        # Advance to next destination
+        self.current_destination = (self.current_destination + 1) % len(self.destinations)
+
+    # Move towards destination
+    if self.state == Enemy.Moving:
+      dest = self.destinations[self.current_destination]
+      if self.x != dest.x:
+        self.x += min_abs(sign(dest.x - self.x) * self.speed, dest.x - self.x)
+      if self.y != dest.y:
+        self.y += min_abs(sign(dest.y - self.y) * self.speed, dest.x - self.x)
+
+    self.sprite.move(self.x, self.y)
+    print self.x, self.y
     return True
 
   def render(self, screen):
