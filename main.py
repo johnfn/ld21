@@ -227,8 +227,10 @@ class Character:
     self.flicker_tick = 0
     self.items = []
 
-  def give_item(self, item_name):
+  def get_item(self, item_name):
     self.items.append(item_name)
+
+    Dialog.start_dialog(item_name)
 
   def flicker(self):
     self.flicker_tick = 50
@@ -392,7 +394,16 @@ class Dialog:
                               ("Narrator", "That guy looks annoying."),
                               ("Narrator", "Fortunately you have perfect perception of him (from your escape artist powers)."),
                               ("Narrator", "This ability is really helpful. Believe me."),
-                             ]
+                             ],
+                 # replicator GET dialog
+                 "replicator": [ ("Narrator", "Ooh."),
+                                 ("Narrator", "You seem to have found a nice shiny Replicator."),
+                                 ("Narrator", "When you escape, you'll now leave a non-moving copy of yourself behind."),
+                                 ("Game Maker", "What? The theme isn't self replication?"),
+                                 ("Game Maker", "Oh well"),
+                                 ("Narrator", "This is great for escaping, since enemies will think that you've given up, when really..."),
+                                 ("Narrator", "You've escaped!"),
+                              ],
                               }
   speaker = ""
   position = 0 # What is the first dialog we haven't seen yet?
@@ -412,6 +423,7 @@ class Dialog:
 
   @staticmethod
   def start_dialog(speaker):
+    if speaker not in Dialog.all_dialog: return False
     Dialog.speaker = speaker
     Dialog.position = 0
     Dialog.game.state = States.Dialog
@@ -534,7 +546,7 @@ class Pickup:
 
   def update(self):
     if self.char.touching_item(self):
-      self.char.give_item(self.pickup_type)
+      self.char.get_item(self.pickup_type)
       return False
     else:
       return True
