@@ -105,16 +105,19 @@ class Map:
     if rgb_triple == (255, 0, 0): # Enemy
       self.current_map.set_at(coords, NOTHING_COLOR)
       Updater.add_updater(Enemy(coords, self.char))
+    if rgb_triple == (0, 255, 0): # Rotator
+      self.current_map.set_at(coords, NOTHING_COLOR)
+      Updater.add_updater(Rotator(coords))
 
   #got to update with abs
   def update_map(self, x, y, pos_abs=False):
     if x == 0 and y == 0 and not pos_abs: return # Don't bother.
 
-    # Store unbeaten enemies.
-    Map.Cache[tuple(self.map_coords)] = Updater.get_all(Enemy)
+    # Store stuff that stays between maps.
+    Map.Cache[tuple(self.map_coords)] = Updater.get_all(lambda x: hasattr(x, "cacheable"))
 
     # Remove old enemies
-    Updater.remove_all(Enemy)
+    Updater.remove_all(lambda x: hasattr(x, "cacheable"))
 
     if pos_abs:
       self.map_coords[0] = x
@@ -338,6 +341,29 @@ class Point:
     self.x = x
     self.y = y
 
+class Rotator:
+  def __init__(self, coords):
+    self.coords = coords
+    self.x, self.y = [x * TILE_SIZE for x in coords]
+
+    self.sprite = Image("wall.png", 2, 1, self.x, self.y)
+  
+  def depth(self):
+    return 0
+
+  def escape(self):
+    return Point(*self.coords)
+
+  def update(self):
+    return True
+
+  # Stored between maps?
+  def cacheable(self):
+    pass
+
+  def render(self, screen):
+    self.sprite.render(screen)
+
 class Enemy:
   # coords: location of enemy
   Waiting = 0
@@ -362,6 +388,10 @@ class Enemy:
 
     self.x = new_coords[0]
     self.y = new_coords[1]
+
+  # Stored between maps?
+  def cacheable(self):
+    pass
 
   def depth(self):
     return 0
@@ -479,12 +509,12 @@ class Updater:
     Updater.add_updater(HoverText("I can't.", char, 0))
 
   @staticmethod
-  def remove_all(some_type):
-    Updater.items = [item for item in Updater.items if not isinstance(item, some_type)]
+  def remove_all(fn):
+    Updater.items = [item for item in Updater.items if not fn(item)]
 
   @staticmethod
-  def get_all(some_type):
-    return [item for item in Updater.items if isinstance(item, some_type)]
+  def get_all(fn):
+    return [item for item in Updater.items if fn(item)]
 
 class States:
   Dialog = "Dialog"
