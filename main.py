@@ -250,6 +250,17 @@ class Dialog:
     screen.blit(rendered_text, my_rect.topleft)
     return True
 
+  @staticmethod
+  def show_overhead(user, screen):
+    my_width = 100
+
+    my_font = pygame.font.Font(None, 14)
+
+    my_rect = pygame.Rect((user.x - my_width / 2, user.y - 10, my_width, 16))
+    rendered_text = render_textrect("HOOOLY COW!!!!!!", my_font, my_rect, (10, 10, 10), (255, 255, 255), 0)
+
+    screen.blit(rendered_text, my_rect.topleft)
+
 class States:
   Dialog = "Dialog"
   Normal = "Normal"
@@ -273,7 +284,6 @@ class Game:
       self.state = States.Dialog
       Dialog.start_dialog("initial")
 
-
   def loop(self):
     while 1:
       for event in pygame.event.get():
@@ -292,6 +302,8 @@ class Game:
           self.state = States.Normal
       elif self.state == States.Normal:
         self.char.update(pygame.key.get_pressed(), self.map)
+
+      Dialog.show_overhead(self.char, self.screen)
 
       time.sleep(.02)
 
