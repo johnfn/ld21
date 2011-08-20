@@ -143,6 +143,9 @@ class Character:
 
   def update(self, keys, game_map):
     """ Move the character one tick. """
+
+    # Movement code
+
     self.vy += 1
 
     jumping = False
@@ -176,6 +179,16 @@ class Character:
 
     if not Character.on_ground(self.x, self.y, game_map):
       self.on_ground = False
+
+    # Flip code <ESC>
+
+    if UpKeys.key_up(27):
+      new_x = ABS_MAP_SIZE - self.x
+      new_y = self.y
+      if Character.touching_wall(new_x, self.y, game_map):
+        Updater.add_updater(HoverText("I can't go there!", self, 0))
+      else:
+        self.x = new_x
 
   def render(self, screen):
     self.rect.x = self.x
@@ -272,7 +285,9 @@ class HoverText:
     my_font = pygame.font.Font(None, 14)
 
     my_rect = pygame.Rect((self.follow.x - my_width / 2, self.follow.y - 10, my_width, 16))
-    rendered_text = render_textrect("HOOOLY COW!!!!!!", my_font, my_rect, (10, 10, 10), (255, 255, 255), 0)
+    if my_rect.x < 0:
+      my_rect.x = 0
+    rendered_text = render_textrect(self.text, my_font, my_rect, (10, 10, 10), (255, 255, 255), 0)
 
     screen.blit(rendered_text, my_rect.topleft)
 
