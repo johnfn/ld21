@@ -114,8 +114,6 @@ class Map:
       for y in range(self.size):
         screen.blit(self.mapdata[x][y], self.maprects[x][y])
   
-
-
 class Character:
   def __init__(self, x, y):
     # Tweakable settings
@@ -127,6 +125,8 @@ class Character:
     self.y = y
     self.vx = 0
     self.vy = 0
+
+    self.health = 6
 
     self.img = TileSheet.get("wall.png", 1, 0)
     self.rect = self.img.get_rect()
@@ -263,7 +263,6 @@ class Dialog:
     screen.blit(rendered_text, my_rect.topleft)
     return True
 
-
 class HoverText:
   # follow must expose x, y (could generalize to enemies etc)
   def __init__(self, text, follow, depth=0):
@@ -291,6 +290,40 @@ class HoverText:
 
     screen.blit(rendered_text, my_rect.topleft)
 
+class Image:
+  def __init__(self, src_file, src_x, src_y, dst_x, dst_y):
+    self.img = TileSheet.get(src_file, src_x, src_y)
+    self.rect = self.img.get_rect()
+
+    self.rect.x = dst_x
+    self.rect.y = dst_y
+
+  def render(self, screen):
+    screen.blit(self.img, self.rect)
+
+  # TODO
+  def update(self, src_file, src_x, src_y):
+    """ Change the image source. """
+    pass
+
+class HUD:
+  def __init__(self, follow):
+    self._depth = 20
+    self.hearts = []
+    self.follow = follow
+
+    for x in range(3):
+      self.hearts.append(Image("wall.png", 2, 0, 20 + x * 20, 20))
+      
+  def depth(self):
+    return self._depth
+
+  def update(self):
+    return True # don't destroy
+
+  def render(self, screen):
+    [heart.render(screen) for heart in self.hearts]
+
 class Updater:
   # Update each item every step (until it kills itself)
 
@@ -316,7 +349,6 @@ class Updater:
     for item in items_sorted:
       item.render(screen)
 
-
 class States:
   Dialog = "Dialog"
   Normal = "Normal"
@@ -341,6 +373,7 @@ class Game:
       Dialog.start_dialog("initial")
 
     Updater.add_updater(HoverText("Sup?", self.char, 0))
+    Updater.add_updater(HUD(self.char))
 
   def loop(self):
     while 1:
