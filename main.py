@@ -113,7 +113,7 @@ class Map:
       # TODO
     if rgb_triple == (150,90,60):
       self.current_map.set_at(coords, NOTHING_COLOR)
-      Updater.add_updater(DialogStarter(coords, self.char, rgb_triple))
+      Updater.add_updater(DialogStarter(coords, self.char, rgb_triple, self.map_coords))
 
   #got to update with abs
   def update_map(self, x, y, pos_abs=False):
@@ -310,16 +310,29 @@ class UpKeys:
     return False
 
 class Dialog:
-  all_dialog = { "initial" : [("Narrator", "You are the greatest escape artist."),
+  all_dialog = { (0, 0)    : [
+                              ("Narrator", "You are the greatest escape artist."),
                               ("Narrator", "Ever."), 
                               ("Narrator", "At least that's what you think."), 
                               ("Narrator", "Except some jerks trapped you in this big weird looking facility."),
                               ("Narrator", "And you want to escape."),
                               ("Narrator", "You have one special talent though."),
-                              ("Narrator", "Press ESC to activate your escape artist powers.")]
+                              ("Narrator", "This talent is helped by glowing things like the one that you see."), # TODO crappy dialog lol
+                              ("Narrator", "Press ESC to activate your escape artist powers.")
+                             ],
+                 (2, 0)    : [
+                              ("Narrator", "That guy looks annoying."),
+                              ("Narrator", "Fortunately you have perfect perception of him (from your escape artist powers)."),
+                              ("Narrator", "This ability is really helpful. Believe me."),
+                             ]
                               }
   speaker = ""
   position = 0 # What is the first dialog we haven't seen yet?
+  game = None
+
+  @staticmethod
+  def begin(game):
+    Dialog.game = game
 
   @staticmethod
   def update(screen):
@@ -333,6 +346,7 @@ class Dialog:
   def start_dialog(speaker):
     Dialog.speaker = speaker
     Dialog.position = 0
+    Dialog.game.state = States.Dialog
     return True
 
   @staticmethod
@@ -365,7 +379,8 @@ class Point:
 
 # When you touch this, you start a dialog.
 class DialogStarter:
-  def __init__(self, coords, char, dlg_type):
+  def __init__(self, coords, char, dlg_type, map_coords):
+    self.map_coords = tuple(map_coords)
     self.coords = coords
     self.x, self.y = [x * TILE_SIZE for x in coords]
     self.char = char
@@ -383,6 +398,9 @@ class DialogStarter:
 
       # This is obscure.
       self.kill_lambda = lambda x: isinstance(x, DialogStarter) and x.dlg_type == self.dlg_type
+
+      self.new_state = States.Dialog
+      Dialog.start_dialog(self.map_coords)
       return True
 
     return True
@@ -598,13 +616,15 @@ class Game:
 
     self.char = Character(40, 40)
 
+    Dialog.begin(self)
+
     if DEBUG:
       self.map = Map("map.png", [2, 0], self.char)
       self.state = States.Normal
     else:
       self.map = Map("map.png", [0, 0], self.char)
       self.state = States.Dialog
-      Dialog.start_dialog("initial")
+      Dialog.start_dialog((0, 0))
 
     Updater.add_updater(HoverText("Sup?", self.char, 0))
     Updater.add_updater(HUD(self.char))
