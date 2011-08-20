@@ -30,6 +30,11 @@ def generic_touching(one, two):
       return True
   return False
 
+# Does point touch rect?
+def point_touch_rect(pt, rect):
+  return rect.x <= pt.x <= rect.x + TILE_SIZE and\
+         rect.y <= pt.y <= rect.y + TILE_SIZE
+
 def sign(x):
   if x > 0: return 1
   if x < 0: return -1
@@ -254,15 +259,28 @@ class Character:
 
   # doesn't make sense for this to be a static method of character. Oh well.
   @staticmethod
-  def touching_wall(x, y, game_map):
-    return or_fn([game_map.is_wall(*pos) for pos in get_touching(x, y)] + 
-                 [True for x in Updater.get_all(lambda obj: isinstance(obj, Replicated) and generic_touching(obj, Point(x, y)))])
+  def touching_wall(x, y, game_map, uid=-1):
+    return or_fn([game_map.is_wall(*pos) for pos in get_touching(x, y)] + [Character.touching_updater(x, y, uid)])
+
+  @staticmethod
+  def touching_updater(x, y, uid=-1):
+    return len([True for x in Updater.get_all(lambda obj: isinstance(obj, Replicated) and uid != obj.uid and generic_touching(obj, Point(x, y)))]) > 0
+
+  @staticmethod
+  def point_touching_updater(x, y, uid=-1):
+    return len([True for x in Updater.get_all(lambda obj: isinstance(obj, Replicated) and uid != obj.uid and point_touch_rect(Point(x, y), obj))]) > 0
 
   @staticmethod
   def on_ground(x, y, game_map):
+    # Holy incoming bad code
     feet_position1 = ((x + 2)/TILE_SIZE, (y + TILE_SIZE)/TILE_SIZE)
     feet_position2 = ((x + TILE_SIZE - 2)/TILE_SIZE, (y + TILE_SIZE)/TILE_SIZE)
-    return game_map.is_wall(*feet_position1) or game_map.is_wall(*feet_position2)
+
+    feet_pos_abs1 =  ((x + 2), (y + TILE_SIZE))
+    feet_pos_abs2 =  ((x + TILE_SIZE - 2), (y + TILE_SIZE))
+
+    return game_map.is_wall(*feet_position1) or game_map.is_wall(*feet_position2) or\
+        Character.point_touching_updater(*feet_pos_abs1) or Character.point_touching_updater(*feet_pos_abs2)
 
   def update(self, keys, game_map):
     """ Move the character one tick. """
@@ -349,7 +367,7 @@ class Character:
 
       # Leave a dead body!!!
       if self.has_replicator():
-        Updater.add_updater(Replicated(old_coords, game_map))
+        Updater.add_updater(Replicated(old_coords, game_map, self))
 
   # On hurt or something
   def hurt(self, damage, dmg_type="enemy"):
@@ -490,7 +508,7 @@ class Point:
     self.y = y
 
   def __str__(self):
-    return "<Point x : %2f y : %2f>" % (self.x, self.y)
+    return "<Point x : %f y : %f>" % (self.x, self.y)
 
   def is_simple(self):
     if cmp_eps(self.x, 0) and cmp_eps(self.y, 0): return False
@@ -588,7 +606,8 @@ class Pickup:
 
 # One of your dead bodies.
 class Replicated:
-  def __init__(self, coords, game_map):
+  def __init__(self, coords, game_map, char):
+    self.char = char
     self.coords = coords
     self.game_map = game_map
     self.x, self.y = coords
@@ -597,6 +616,10 @@ class Replicated:
     self.sprite = Image("wall.png", 2, 2, self.x, self.y) # your dead body
     self.age = 0
     self.visible = True
+    self.uid = random.random() # about 80 bits of entropy. We should be fine... I hope
+
+  def __str__(self):
+    return "<Replicator x: %d y: %d>" % (self.x, self.y)
 
   def depth(self):
     return 20
@@ -612,7 +635,7 @@ class Replicated:
 
     for y in range(self.vy):
       self.y += 1
-      if Character.touching_wall(self.x, self.y, self.game_map):
+      if Character.touching_wall(self.x, self.y, self.game_map, self.uid) or generic_touching(self, self.char):
         self.y -= 1
         self.vy = 0
         break
