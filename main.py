@@ -126,7 +126,8 @@ class Character:
     self.vx = 0
     self.vy = 0
 
-    self.health = 6
+    self.health = 2
+    self.max_health = 3
 
     self.img = TileSheet.get("wall.png", 1, 0)
     self.rect = self.img.get_rect()
@@ -292,7 +293,9 @@ class HoverText:
 
 class Image:
   def __init__(self, src_file, src_x, src_y, dst_x, dst_y):
-    self.img = TileSheet.get(src_file, src_x, src_y)
+    self.old_values = (src_file, src_x, src_y)
+
+    self.img = TileSheet.get(*self.old_values)
     self.rect = self.img.get_rect()
 
     self.rect.x = dst_x
@@ -303,8 +306,12 @@ class Image:
 
   # TODO
   def update(self, src_file, src_x, src_y):
-    """ Change the image source. """
-    pass
+    new_values = (src_file, src_x, src_y)
+    if new_values == self.old_values:
+      return
+
+    self.old_values = new_values
+    self.img = TileSheet.get(*self.old_values)
 
 class HUD:
   def __init__(self, follow):
@@ -319,7 +326,14 @@ class HUD:
     return self._depth
 
   def update(self):
-    return True # don't destroy
+    for x in range(len(self.hearts)):
+      if self.follow.health > x:
+        self.hearts[x].update("wall.png", 2, 0)
+      else:
+        self.hearts[x].update("wall.png", 3, 0)
+
+
+    return True # never destroy
 
   def render(self, screen):
     [heart.render(screen) for heart in self.hearts]
