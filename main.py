@@ -120,12 +120,16 @@ class Map:
     if rgb_triple == (255, 255, 0): # Treasure
       self.current_map.set_at(coords, NOTHING_COLOR)
       # TODO
+      # Use Pickup
     if rgb_triple == (150,90,60): # Dialog
       self.current_map.set_at(coords, NOTHING_COLOR)
       Updater.add_updater(DialogStarter(coords, self.char, rgb_triple, self.map_coords))
     if rgb_triple == (0,0,255): # Stairs
       self.current_map.set_at(coords, NOTHING_COLOR)
       Updater.add_updater(Stairs(coords))
+    if rgb_triple == (200, 200, 0): # Replicator
+      self.current_map.set_at(coords, NOTHING_COLOR)
+      Updater.add_updater(Pickup(coords, "replicator", self.char))
 
   #got to update with abs
   def update_map(self, x, y, pos_abs=False):
@@ -221,6 +225,10 @@ class Character:
     self.ghost = Image("wall.png", 1, 1, 0, 0)
 
     self.flicker_tick = 0
+    self.items = []
+
+  def give_item(self, item_name):
+    self.items.append(item_name)
 
   def flicker(self):
     self.flicker_tick = 50
@@ -252,6 +260,7 @@ class Character:
 
     self.vy += 1
     if on_stairs:
+      # Disregard all physics. YOU ARE SUPERMAN.
       self.vy = (keys[pygame.K_s] - keys[pygame.K_w]) * self.speed
 
     jumping = False
@@ -498,6 +507,37 @@ class Rotator:
   # Stored between maps?
   def cacheable(self):
     pass
+
+  def render(self, screen):
+    self.sprite.render(screen)
+
+class Pickup:
+  def __init__(self, coords, pickup_type, char):
+    self.coords = coords
+    self.x, self.y = [x * TILE_SIZE for x in coords]
+    self.pickup_type = pickup_type
+    self.char = char
+
+    if pickup_type == "replicator":
+      self.sprite = Image("wall.png", 1, 2, self.x, self.y)
+
+  @property
+  def x(self):
+    return self.rect.x
+
+  @property
+  def y(self):
+    return self.rect.y
+
+  def depth(self):
+    return 0
+
+  def update(self):
+    if self.char.touching_item(self):
+      self.char.give_item(self.pickup_type)
+      return False
+    else:
+      return True
 
   def render(self, screen):
     self.sprite.render(screen)
