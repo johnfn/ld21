@@ -111,6 +111,9 @@ class Map:
     if rgb_triple == (255, 255, 0): # Treasure
       self.current_map.set_at(coords, NOTHING_COLOR)
       # TODO
+    if rgb_triple == (150,90,60):
+      self.current_map.set_at(coords, NOTHING_COLOR)
+      Updater.add_updater(DialogStarter(coords, self.char, rgb_triple))
 
   #got to update with abs
   def update_map(self, x, y, pos_abs=False):
@@ -200,6 +203,12 @@ class Character:
     self.rect = self.img.get_rect()
 
     self.ghost = Image("wall.png", 1, 1, 0, 0)
+
+  # predicate
+  # item must have x, y attrs
+  def touching_item(self, item):
+    return (self.x <= item.x <= self.x + TILE_SIZE or self.x <= item.x + TILE_SIZE/2 <= self.x + TILE_SIZE) and\
+           (self.y <= item.y <= self.y + TILE_SIZE or self.y <= item.y + TILE_SIZE/2 <= self.y + TILE_SIZE)
 
   @staticmethod
   def touching_wall(x, y, game_map):
@@ -354,6 +363,36 @@ class Point:
     self.x = x
     self.y = y
 
+# When you touch this, you start a dialog.
+class DialogStarter:
+  def __init__(self, coords, char, dlg_type):
+    self.coords = coords
+    self.x, self.y = [x * TILE_SIZE for x in coords]
+    self.char = char
+    self.dlg_type = dlg_type
+
+  def depth(self):
+    return 0
+    
+  def update(self):
+    if self.char.touching_item(self):
+      print "HOLY DIALOG"
+
+      # destroy ALL dialogs (of this type) on this level, so we don't see this 
+      # again.
+
+      # This is obscure.
+      self.kill_lambda = lambda x: isinstance(x, DialogStarter) and x.dlg_type == self.dlg_type
+      return True
+
+    return True
+
+  def cacheable(self):
+    pass
+
+  def render(self, screen):
+    pass
+
 class Rotator:
   def __init__(self, coords):
     self.coords = coords
@@ -499,6 +538,7 @@ class Updater:
   # update(): returns False if destroyed, True otherwise
   # render(screen): renders the object
   items = [] # Things that need to be updated every step
+  KillAll = "killall"
 
   @staticmethod
   def add_updater(updater):
@@ -507,6 +547,15 @@ class Updater:
   @staticmethod
   def update_all():
     Updater.items = [item for item in Updater.items if item.update()]
+
+    # This is a really hard problem. Think about it after LD.
+    kills = []
+    for item in Updater.items:
+      if hasattr(item, 'kill_lambda'):
+        kills.append(item.kill_lambda)
+
+    for kill_lambda in kills:
+      Updater.items = [item for item in Updater.items if not kill_lambda(item)]
 
   @staticmethod
   def render_all(screen):
@@ -525,7 +574,9 @@ class Updater:
 
   @staticmethod
   def remove_all(fn):
+    print Updater.items
     Updater.items = [item for item in Updater.items if not fn(item)]
+    print Updater.items
 
   @staticmethod
   def get_all(fn):
