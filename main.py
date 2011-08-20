@@ -216,6 +216,11 @@ class Character:
 
     self.ghost = Image("wall.png", 1, 1, 0, 0)
 
+    self.flicker_tick = 0
+
+  def flicker(self):
+    self.flicker_tick = 50
+
   # predicate
   # item must have x, y attrs
   def touching_item(self, item):
@@ -304,6 +309,7 @@ class Character:
   def hurt(self, damage, dmg_type="enemy"):
     self.health -= damage
 
+    self.flicker()
     if dmg_type == "enemy":
       self.x = self.restore_x
       self.y = self.restore_y
@@ -318,6 +324,12 @@ class Character:
   def render(self, screen):
     self.rect.x = self.x
     self.rect.y = self.y
+    
+    if self.flicker_tick > 0:
+      self.flicker_tick -= 1
+
+      if self.flicker_tick % 3 == 0:
+        return
 
     screen.blit(self.img, self.rect)
 
