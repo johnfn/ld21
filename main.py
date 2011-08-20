@@ -276,8 +276,8 @@ class Character:
     feet_position1 = ((x + 2)/TILE_SIZE, (y + TILE_SIZE)/TILE_SIZE)
     feet_position2 = ((x + TILE_SIZE - 2)/TILE_SIZE, (y + TILE_SIZE)/TILE_SIZE)
 
-    feet_pos_abs1 =  ((x + 2), (y + TILE_SIZE))
-    feet_pos_abs2 =  ((x + TILE_SIZE - 2), (y + TILE_SIZE))
+    feet_pos_abs1 =  ((x + 2), (y + TILE_SIZE + 2))
+    feet_pos_abs2 =  ((x + TILE_SIZE - 2), (y + TILE_SIZE + 2))
 
     return game_map.is_wall(*feet_position1) or game_map.is_wall(*feet_position2) or\
         Character.point_touching_updater(*feet_pos_abs1) or Character.point_touching_updater(*feet_pos_abs2)
