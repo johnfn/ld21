@@ -156,6 +156,9 @@ class Character:
       jumping = True
       self.vy = -self.jump_height
 
+    if self.vy > TILE_SIZE: 
+      self.vy = TILE_SIZE * sign(self.vy)
+
     dx = (keys[pygame.K_d] - keys[pygame.K_a]) * self.speed + self.vx
     dy =                                                    + self.vy
 
