@@ -244,6 +244,7 @@ class Character:
     return (self.x <= item.x <= self.x + TILE_SIZE or self.x <= item.x + TILE_SIZE/2 <= self.x + TILE_SIZE) and\
            (self.y <= item.y <= self.y + TILE_SIZE or self.y <= item.y + TILE_SIZE/2 <= self.y + TILE_SIZE)
 
+  # doesn't make sense for this to be a static method of character. Oh well.
   @staticmethod
   def touching_wall(x, y, game_map):
     return or_fn([game_map.is_wall(*pos) for pos in get_touching(x, y)])
@@ -314,16 +315,22 @@ class Character:
     if target is None: 
       # No escaper found in this map.
       if UpKeys.key_up(27):
+        #TODO: Better reason why not?
         Updater.add_updater(HoverText("I can't.", self, 0))
 
       return
-    
+    flipped_x = target.x * 2 - self.x
+
     # Flip code. Probably should move to new function
-    self.ghost.move(target.x * 2 - self.x, self.y)
+    self.ghost.move(flipped_x, self.y)
     if UpKeys.key_up(27):
+      if abs(flipped_x - self.x) < TILE_SIZE + 1 and self.has_replicator():
+        Updater.add_updater(HoverText("My own dead body would kill me!", self, 0))
+        return
+
       old_coords = (self.x, self.y)
 
-      new_x = target.x * 2 - self.x
+      new_x = flipped_x
       new_y = self.y
       if Character.touching_wall(new_x, self.y, game_map):
         Updater.add_updater(HoverText("I can't go there!", self, 0))
@@ -332,7 +339,7 @@ class Character:
 
       # Leave a dead body!!!
       if self.has_replicator():
-        Updater.add_updater(Replicated(old_coords))
+        Updater.add_updater(Replicated(old_coords, game_map))
 
   # On hurt or something
   def hurt(self, damage, dmg_type="enemy"):
@@ -431,8 +438,10 @@ class Dialog:
 
     return Dialog.show_dialog(screen)
 
+  # All the True/Falses here are pure paranoia. Pretty sure they do nothing.
   @staticmethod
   def start_dialog(speaker):
+    if DEBUG: return True
     if speaker not in Dialog.all_dialog: return False
     Dialog.speaker = speaker
     Dialog.position = 0
@@ -554,6 +563,9 @@ class Pickup:
   def depth(self):
     return 0
 
+  def cacheable(self):
+    pass
+
   def update(self):
     if self.char.touching_item(self):
       self.char.get_item(self.pickup_type)
@@ -566,11 +578,13 @@ class Pickup:
 
 # One of your dead bodies.
 class Replicated:
-  def __init__(self, coords):
+  def __init__(self, coords, game_map):
     self.coords = coords
+    self.game_map = game_map
     self.x, self.y = coords
 
-    self.sprite = Image("wall.png", 1, 0, self.x, self.y)
+    self.vy = 0
+    self.sprite = Image("wall.png", 2, 2, self.x, self.y) # your dead body
     self.age = 0
     self.visible = True
 
@@ -578,14 +592,26 @@ class Replicated:
     return 20
 
   def update(self):
+    # Hide when old
     self.age += 1
     self.visible = not (self.age > 100 and self.age % 3 == 0)
 
-    return self.age < 150
+    # Do downward movement (only! no pushing or vx at all! trying to make my life easier...)
+    if self.vy < TILE_SIZE:
+      self.vy += 1
 
-  # Sure, why not?
-  def cacheable(self):
-    pass
+    for y in range(self.vy):
+      self.y += 1
+      if Character.touching_wall(self.x, self.y, self.game_map):
+        self.y -= 1
+        self.vy = 0
+        break
+
+    # finally
+    self.sprite.move(self.x, self.y)
+
+    # destroy?
+    return self.age < 150
 
   def render(self, screen):
     if self.visible:
@@ -711,7 +737,7 @@ class HoverText:
 
     my_font = pygame.font.Font(None, 14)
 
-    my_rect = pygame.Rect((self.follow.x - my_width / 2, self.follow.y - 10, my_width, 16))
+    my_rect = pygame.Rect((self.follow.x - my_width / 2, self.follow.y - 40, my_width, 30))
     if my_rect.x < 0:
       my_rect.x = 0
     rendered_text = render_textrect(self.text, my_font, my_rect, (10, 10, 10), (255, 255, 255), 0)
