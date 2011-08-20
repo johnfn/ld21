@@ -261,6 +261,32 @@ class Dialog:
 
     screen.blit(rendered_text, my_rect.topleft)
 
+class Updater:
+  # Update each item every step (until it kills itself)
+
+  # Must expose 3 mthods
+  # depth(): returns relative depth or 0 if it doesn't matter
+  # update(): returns False if destroyed, True otherwise
+  # render(): renders the object
+  items = [] # Things that need to be updated every step
+
+  @staticmethod
+  def add_updater(updater):
+    items.append(updater)
+
+  @staticmethod
+  def update_all():
+    Updater.items = [item for item in Updater.items if item.update()]
+
+  @staticmethod
+  def render_all():
+    # sort by depth
+    items_sorted = sorted(items, key=lambda x:x.depth())
+
+    for item in items_sorted:
+      item.render()
+
+
 class States:
   Dialog = "Dialog"
   Normal = "Normal"
