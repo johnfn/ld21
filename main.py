@@ -182,6 +182,8 @@ class Character:
     self.img = TileSheet.get("wall.png", 1, 0)
     self.rect = self.img.get_rect()
 
+    self.ghost = Image("wall.png", 1, 1, 0, 0)
+
   @staticmethod
   def touching_wall(x, y, game_map):
     return or_fn([game_map.is_wall(*pos) for pos in get_touching(x, y)])
@@ -236,9 +238,10 @@ class Character:
 
     # Flip code <ESC>
 
-    if UpKeys.key_up(27):
-      target = Updater.get_escape(self)
+    target = Updater.get_escape(self)
 
+    self.ghost.move(target.x * 2 - self.x, self.y)
+    if UpKeys.key_up(27):
       new_x = target.x * 2 - self.x
       new_y = self.y
       if Character.touching_wall(new_x, self.y, game_map):
@@ -249,7 +252,9 @@ class Character:
   def render(self, screen):
     self.rect.x = self.x
     self.rect.y = self.y
+
     screen.blit(self.img, self.rect)
+    self.ghost.render(screen)
 
 class UpKeys:
   """ Simple abstraction to check for recent key released behavior. """
