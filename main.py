@@ -8,6 +8,8 @@ WALLS = [(0,0,0)]
 TILE_SIZE = 20
 MAP_SIZE = 20
 
+NOTHING_COLOR = (255, 255, 255)
+
 ABS_MAP_SIZE = TILE_SIZE * MAP_SIZE
 
 def get_touching(x_abs, y_abs):
@@ -67,6 +69,11 @@ class Map:
     if not self.in_bounds(y, x): return False
     return self.data[y][x] in WALLS
 
+  def parse(self, coords, rgb_triple):
+    if rgb_triple == (255, 0, 0): # Enemy
+      self.current_map.set_at(coords, NOTHING_COLOR)
+      print "omg an enemy at", coords
+
   #got to update with abs
   def update_map(self, x, y, pos_abs=False):
     if pos_abs:
@@ -77,6 +84,11 @@ class Map:
       self.map_coords[1] += y
 
     self.current_map = TileSheet.get(self.file_name, *self.map_coords)
+
+    # This is like a preprocessor to parse things out of the map (like enemies)
+    [[self.parse((x, y), self.current_map.get_at((x, y))) for x in range(MAP_SIZE)]\
+                                                          for y in range(MAP_SIZE)]
+
     self.data = [[self.current_map.get_at((x, y)) for x in range(MAP_SIZE)]\
                                                   for y in range(MAP_SIZE)]
 
@@ -156,8 +168,8 @@ class Character:
       jumping = True
       self.vy = -self.jump_height
 
-    if self.vy > TILE_SIZE: 
-      self.vy = TILE_SIZE * sign(self.vy)
+    # A bit of a hack to correct for speedy falling (where you fall through blocks).
+    if self.vy > TILE_SIZE: self.vy = TILE_SIZE * sign(self.vy)
 
     dx = (keys[pygame.K_d] - keys[pygame.K_a]) * self.speed + self.vx
     dy =                                                    + self.vy
