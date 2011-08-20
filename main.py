@@ -48,6 +48,14 @@ class Image:
     self.rect.x = dst_x
     self.rect.y = dst_y
 
+  @property
+  def x(self):
+    return self.rect.x
+
+  @property
+  def y(self):
+    return self.rect.y
+
   def render(self, screen):
     screen.blit(self.img, self.rect)
 
@@ -191,6 +199,10 @@ class Character:
     # Initial values
     self.x = x
     self.y = y
+
+    self.restore_x = self.x # Restore on being seen
+    self.restore_y = self.y
+
     self.vx = 0
     self.vy = 0
 
@@ -222,6 +234,7 @@ class Character:
 
   def update(self, keys, game_map):
     """ Move the character one tick. """
+    new_screen = False
 
     # Movement code
 
@@ -247,6 +260,8 @@ class Character:
       self.x += -((self.x + dx)/(ABS_MAP_SIZE - TILE_SIZE)) * (ABS_MAP_SIZE - TILE_SIZE)
       self.y += -((self.y + dy)/(ABS_MAP_SIZE - TILE_SIZE)) * (ABS_MAP_SIZE - TILE_SIZE)
 
+      new_screen = True
+
     self.x += dx
     while Character.touching_wall(self.x, self.y, game_map):
       self.x += -sign(dx)
@@ -262,6 +277,9 @@ class Character:
     if not Character.on_ground(self.x, self.y, game_map):
       self.on_ground = False
 
+    if new_screen:
+      self.set_restore_point()
+
     # Flip code <ESC>
 
     target = Updater.get_escape()
@@ -272,6 +290,7 @@ class Character:
 
       return
     
+    # Flip code. Probably should move to new function
     self.ghost.move(target.x * 2 - self.x, self.y)
     if UpKeys.key_up(27):
       new_x = target.x * 2 - self.x
@@ -280,6 +299,21 @@ class Character:
         Updater.add_updater(HoverText("I can't go there!", self, 0))
       else:
         self.x = new_x
+
+  # On hurt or something
+  def hurt(self, damage, dmg_type="enemy"):
+    self.health -= damage
+
+    if dmg_type == "enemy":
+      self.x = self.restore_x
+      self.y = self.restore_y
+
+      self.vx = 0
+      self.vy = 0
+
+  def set_restore_point(self):
+    self.restore_x = self.x
+    self.restore_y = self.y
 
   def render(self, screen):
     self.rect.x = self.x
@@ -444,8 +478,6 @@ class Rotator:
     self.sprite.render(screen)
 
 class Enemy:
-
-  # TODO: Rewriting this entire thing in terms of dirs and times.
   # Example: {move: [1, 0], time: 60}, {move: [-1, 0], time: 60}
 
   def __init__(self, coords, char, orders=None):
@@ -492,6 +524,11 @@ class Enemy:
 
   def update(self):
     rotating = False
+
+    # TODO: Include this object too, not just its sight range
+    for eyesight in self.los:
+      if self.char.touching_item(eyesight):
+        self.char.hurt(1, "enemy")
 
     # Is it all whole numbers
     if self.move_dir.is_simple():
