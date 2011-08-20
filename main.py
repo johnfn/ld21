@@ -526,7 +526,7 @@ class Enemy:
     rotating = False
 
     # TODO: Include this object too, not just its sight range
-    for eyesight in self.los:
+    for eyesight in (self.los + [self]):
       if self.char.touching_item(eyesight):
         self.char.hurt(1, "enemy")
 
