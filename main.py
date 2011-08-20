@@ -232,6 +232,9 @@ class Character:
 
     Dialog.start_dialog(item_name)
 
+  def has_replicator(self):
+    return "replicator" in self.items
+
   def flicker(self):
     self.flicker_tick = 50
 
@@ -318,12 +321,18 @@ class Character:
     # Flip code. Probably should move to new function
     self.ghost.move(target.x * 2 - self.x, self.y)
     if UpKeys.key_up(27):
+      old_coords = (self.x, self.y)
+
       new_x = target.x * 2 - self.x
       new_y = self.y
       if Character.touching_wall(new_x, self.y, game_map):
         Updater.add_updater(HoverText("I can't go there!", self, 0))
       else:
         self.x = new_x
+
+      # Leave a dead body!!!
+      if self.has_replicator():
+        Updater.add_updater(Replicated(old_coords))
 
   # On hurt or something
   def hurt(self, damage, dmg_type="enemy"):
@@ -398,11 +407,12 @@ class Dialog:
                  # replicator GET dialog
                  "replicator": [ ("Narrator", "Ooh."),
                                  ("Narrator", "You seem to have found a nice shiny Replicator."),
-                                 ("Narrator", "When you escape, you'll now leave a non-moving copy of yourself behind."),
+                                 ("Narrator", "When you escape, you'll now leave a dead body of yourself behind."),
                                  ("Game Maker", "What? The theme isn't self replication?"),
                                  ("Game Maker", "Oh well"),
-                                 ("Narrator", "This is great for escaping, since enemies will think that you've given up, when really..."),
+                                 ("Narrator", "This is great for escaping, since enemies will think that you're dead, when really..."),
                                  ("Narrator", "You've escaped!"),
+                                 ("Narrator", "Also, you might be able to kill bad guys by dropping your dead bodies on them."),
                               ],
                               }
   speaker = ""
@@ -553,6 +563,33 @@ class Pickup:
 
   def render(self, screen):
     self.sprite.render(screen)
+
+# One of your dead bodies.
+class Replicated:
+  def __init__(self, coords):
+    self.coords = coords
+    self.x, self.y = coords
+
+    self.sprite = Image("wall.png", 1, 0, self.x, self.y)
+    self.age = 0
+    self.visible = True
+
+  def depth(self):
+    return 20
+
+  def update(self):
+    self.age += 1
+    self.visible = not (self.age > 100 and self.age % 3 == 0)
+
+    return self.age < 150
+
+  # Sure, why not?
+  def cacheable(self):
+    pass
+
+  def render(self, screen):
+    if self.visible:
+      self.sprite.render(screen)
 
 class Stairs:
   def __init__(self, coords):
