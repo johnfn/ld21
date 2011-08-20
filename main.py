@@ -250,13 +250,28 @@ class Dialog:
     screen.blit(rendered_text, my_rect.topleft)
     return True
 
-  @staticmethod
-  def show_overhead(user, screen):
+
+class HoverText:
+  # follow must expose x, y (could generalize to enemies etc)
+  def __init__(self, text, follow, depth=0):
+    self.text = text
+    self.follow = follow
+    self._depth = depth
+    self.lifespan = 200
+
+  def depth(self):
+    return self._depth
+
+  def update(self):
+    self.lifespan -= 1
+    return self.lifespan > 0
+
+  def render(self, screen):
     my_width = 100
 
     my_font = pygame.font.Font(None, 14)
 
-    my_rect = pygame.Rect((user.x - my_width / 2, user.y - 10, my_width, 16))
+    my_rect = pygame.Rect((self.follow.x - my_width / 2, self.follow.y - 10, my_width, 16))
     rendered_text = render_textrect("HOOOLY COW!!!!!!", my_font, my_rect, (10, 10, 10), (255, 255, 255), 0)
 
     screen.blit(rendered_text, my_rect.topleft)
@@ -267,24 +282,24 @@ class Updater:
   # Must expose 3 mthods
   # depth(): returns relative depth or 0 if it doesn't matter
   # update(): returns False if destroyed, True otherwise
-  # render(): renders the object
+  # render(screen): renders the object
   items = [] # Things that need to be updated every step
 
   @staticmethod
   def add_updater(updater):
-    items.append(updater)
+    Updater.items.append(updater)
 
   @staticmethod
   def update_all():
     Updater.items = [item for item in Updater.items if item.update()]
 
   @staticmethod
-  def render_all():
+  def render_all(screen):
     # sort by depth
-    items_sorted = sorted(items, key=lambda x:x.depth())
+    items_sorted = sorted(Updater.items, key=lambda x:x.depth())
 
     for item in items_sorted:
-      item.render()
+      item.render(screen)
 
 
 class States:
@@ -310,6 +325,8 @@ class Game:
       self.state = States.Dialog
       Dialog.start_dialog("initial")
 
+    Updater.add_updater(HoverText("Sup?", self.char, 0))
+
   def loop(self):
     while 1:
       for event in pygame.event.get():
@@ -327,9 +344,9 @@ class Game:
         if not Dialog.update(self.screen):
           self.state = States.Normal
       elif self.state == States.Normal:
+        Updater.update_all()
+        Updater.render_all(self.screen)
         self.char.update(pygame.key.get_pressed(), self.map)
-
-      Dialog.show_overhead(self.char, self.screen)
 
       time.sleep(.02)
 
