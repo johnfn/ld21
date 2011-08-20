@@ -87,6 +87,8 @@ class TileSheet:
     return TileSheet.sheets[sheet][x][y]
 
 class Map:
+  Cache = {}
+
   def in_bounds(self, x, y):
     return x >= 0 and y >= 0 and x < self.size and y < self.size
 
@@ -108,8 +110,10 @@ class Map:
   def update_map(self, x, y, pos_abs=False):
     if x == 0 and y == 0 and not pos_abs: return # Don't bother.
 
-    # Remove old enemies
+    # Store unbeaten enemies.
+    Map.Cache[tuple(self.map_coords)] = Updater.get_all(Enemy)
 
+    # Remove old enemies
     Updater.remove_all(Enemy)
 
     if pos_abs:
@@ -118,6 +122,11 @@ class Map:
     else:
       self.map_coords[0] += x
       self.map_coords[1] += y
+
+    if tuple(self.map_coords) in Map.Cache:
+      #TODO: retrieve everything
+      for item in Map.Cache[tuple(self.map_coords)]:
+        Updater.add_updater(item)
 
     self.current_map = TileSheet.get(self.file_name, *self.map_coords)
 
@@ -472,6 +481,10 @@ class Updater:
   @staticmethod
   def remove_all(some_type):
     Updater.items = [item for item in Updater.items if not isinstance(item, some_type)]
+
+  @staticmethod
+  def get_all(some_type):
+    return [item for item in Updater.items if isinstance(item, some_type)]
 
 class States:
   Dialog = "Dialog"
