@@ -257,7 +257,6 @@ class States:
 class Game:
   def __init__(self):
     self.keys_up = []
-    self.state = States.Dialog
 
     pygame.display.init()
     pygame.font.init()
@@ -268,7 +267,12 @@ class Game:
     self.map = Map("map.png", [0, 0])
     self.char = Character(40, 40)
 
-    Dialog.start_dialog("initial")
+    if DEBUG:
+      self.state = States.Normal
+    else:
+      self.state = States.Dialog
+      Dialog.start_dialog("initial")
+
 
   def loop(self):
     while 1:
