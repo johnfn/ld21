@@ -22,6 +22,14 @@ def get_touching(x_abs, y_abs):
       result.append([x,y])
   return result
 
+# do objects with upper-rt corners as given by x.x, x.y etc touch?
+def generic_touching(one, two):
+  four_corners = [Point(x,y) for x in range(one.x, one.x + 17, 16) for y in range(one.y, one.y + 17, 16)]
+  for corner in four_corners:
+    if two.x <= corner.x <= two.x + TILE_SIZE and two.y <= corner.y <= two.y + TILE_SIZE:
+      return True
+  return False
+
 def sign(x):
   if x > 0: return 1
   if x < 0: return -1
@@ -247,7 +255,8 @@ class Character:
   # doesn't make sense for this to be a static method of character. Oh well.
   @staticmethod
   def touching_wall(x, y, game_map):
-    return or_fn([game_map.is_wall(*pos) for pos in get_touching(x, y)])
+    return or_fn([game_map.is_wall(*pos) for pos in get_touching(x, y)] + 
+                 [True for x in Updater.get_all(lambda obj: isinstance(obj, Replicated) and generic_touching(obj, Point(x, y)))])
 
   @staticmethod
   def on_ground(x, y, game_map):
@@ -334,6 +343,7 @@ class Character:
       new_y = self.y
       if Character.touching_wall(new_x, self.y, game_map):
         Updater.add_updater(HoverText("I can't go there!", self, 0))
+        return
       else:
         self.x = new_x
 
