@@ -334,6 +334,7 @@ class Character:
       self.on_ground = False
 
     if new_screen:
+      Updater.remove_all(lambda x: isinstance(x, Replicated))
       self.set_restore_point()
 
     # Flip code <ESC>
