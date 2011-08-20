@@ -336,7 +336,7 @@ class Dialog:
 
   @staticmethod
   def update(screen):
-    if UpKeys.key_up(pygame.K_RETURN):
+    if UpKeys.key_up(pygame.K_SPACE):
       if not Dialog.next_dialog():
         return False
 
@@ -391,8 +391,6 @@ class DialogStarter:
     
   def update(self):
     if self.char.touching_item(self):
-      print "HOLY DIALOG"
-
       # destroy ALL dialogs (of this type) on this level, so we don't see this 
       # again.
 
@@ -441,17 +439,26 @@ class Enemy:
 
   Ticks = [40, 80]
 
+
+  # TODO: Rewriting this entire thing in terms of dirs and times.
+  # Example: {move: [1, 0], time: 60}, {move: [-1, 0], time: 60}
+
   def __init__(self, coords, char):
     # Tweakable
     self.speed = 3
+    self.los_dist = 3 # line of sight range
 
     # Not tweakable
     self.char = char
+
+    self.move_dir = Point(-1, 0)
 
     new_coords = [coords[0] * TILE_SIZE, coords[1] * TILE_SIZE]
     self.sprite = Image("wall.png", 0, 1, *new_coords)
     self.state = Enemy.Waiting
     self.state_ticks_left = Enemy.Ticks[self.state]
+
+    self.los = [Image("wall.png", 3, 1, *(0, 0)) for x in range(self.los_dist)]
 
     # Could have many destinations
     other_destination = Point(new_coords[0] + 100, new_coords[1])
@@ -482,6 +489,8 @@ class Enemy:
       if self.state == Enemy.Moving:
         # Advance to next destination
         self.current_destination = (self.current_destination + 1) % len(self.destinations)
+        self.move_dir.x *= -1
+        self.move_dir.y *= -1
 
     # Move towards destination
     if self.state == Enemy.Moving:
@@ -496,6 +505,10 @@ class Enemy:
 
   def render(self, screen):
     self.sprite.render(screen)
+
+    for l_dist in range(1, self.los_dist + 1): #+ 1 so that we don't overlap with self
+      self.los[l_dist - 1].move(self.x + TILE_SIZE * l_dist * self.move_dir.x, self.y + TILE_SIZE * l_dist * self.move_dir.y)
+      self.los[l_dist - 1].render(screen)
 
 class HoverText:
   # follow must expose x, y (could generalize to enemies etc)
@@ -592,9 +605,7 @@ class Updater:
 
   @staticmethod
   def remove_all(fn):
-    print Updater.items
     Updater.items = [item for item in Updater.items if not fn(item)]
-    print Updater.items
 
   @staticmethod
   def get_all(fn):
