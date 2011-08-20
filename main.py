@@ -180,6 +180,25 @@ class Character:
     self.rect.y = self.y
     screen.blit(self.img, self.rect)
 
+class UpKeys:
+  """ Simple abstraction to check for recent key released behavior. """
+  keys = []
+  
+  @staticmethod
+  def flush():
+    UpKeys.keys = []
+
+  @staticmethod
+  def add_key(val):
+    UpKeys.keys.append(val)
+
+  @staticmethod
+  def key_up(val):
+    if val in UpKeys.keys:
+      UpKeys.keys.remove(val)
+      return True 
+    return False
+
 class Dialog:
   all_dialog = { "initial" : [("Narrator", "You are the greatest escape artist."),
                               ("Narrator", "Ever."), 
@@ -193,9 +212,8 @@ class Dialog:
   position = 0 # What is the first dialog we haven't seen yet?
 
   @staticmethod
-  def update(keys_down, screen):
-    if pygame.K_RETURN in keys_down:
-      keys_down.remove(pygame.K_RETURN)
+  def update(screen):
+    if UpKeys.key_up(pygame.K_RETURN):
       Dialog.next_dialog()
 
     Dialog.show_dialog(screen)
@@ -254,14 +272,14 @@ class Game:
           pygame.display.quit()
           exit(0)
         if event.type == pygame.KEYUP:
-          self.keys_up.append(event.key)
+          UpKeys.add_key(event.key)
       
       self.screen.fill((255,255,255))
       self.map.render(self.screen)
       self.char.render(self.screen)
 
       if self.state == States.Dialog:
-        Dialog.update(self.keys_up, self.screen)
+        Dialog.update(self.screen)
       elif self.state == States.Normal:
         self.char.update(pygame.key.get_pressed(), self.map)
 
