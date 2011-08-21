@@ -4,7 +4,7 @@ import random
 import spritesheet
 from wordwrap import render_textrect
 
-DEBUG = True
+DEBUG = False
 
 WALLS = [(0,0,0)]
 TILE_SIZE = 20
@@ -1010,6 +1010,12 @@ class Game:
 
     pygame.display.init()
     pygame.font.init()
+
+    if not DEBUG:
+      pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=4096)
+      pygame.mixer.music.load('ludumherp.mp3')
+      pygame.mixer.music.play(-1) #Infinite loops! HAHAH!
+
     self.screen = pygame.display.set_mode((ABS_MAP_SIZE * 2, ABS_MAP_SIZE * 2))
     self.buff = pygame.Surface((ABS_MAP_SIZE, ABS_MAP_SIZE))
 
