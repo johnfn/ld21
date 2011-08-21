@@ -4,7 +4,7 @@ import random
 import spritesheet
 from wordwrap import render_textrect
 
-DEBUG = False
+DEBUG = True
 
 WALLS = [(0,0,0)]
 TILE_SIZE = 20
@@ -274,7 +274,8 @@ class Character:
     self.flicker_tick = 0
 
     if DEBUG:
-      self.items = ["escaper"]
+      # self.items = ["escaper"]
+      self.items = []
     else:
       self.items = []
 
@@ -410,18 +411,17 @@ class Character:
         Updater.add_updater(HoverText("I can't without a target.", self, 0))
       return
 
-    if self.x < target.x:
-      flipped_x = ABS_MAP_SIZE - (float(self.x)/target.x) * (ABS_MAP_SIZE - target.x)
-    else:
-      flipped_x = target.x - (float(self.x - target.x)/(ABS_MAP_SIZE - target.x)) * (target.x)
-
-    flipped_x = int(flipped_x)
+    flipped_x = int(target.x * 2 - self.x)
 
     # Flip code. Probably should move to new function
     self.ghost.move(flipped_x, self.y)
     if UpKeys.key_up(27):
       if abs(flipped_x - self.x) < TILE_SIZE + 1 and self.has_replicator():
         Updater.add_updater(HoverText("My own dead body would kill me!", self, 0))
+        return
+      
+      if flipped_x < 0 or flipped_x > ABS_MAP_SIZE:
+        Updater.add_updater(HoverText("I can't see there!", self, 0))
         return
 
       old_coords = (self.x, self.y)
@@ -910,7 +910,7 @@ class HoverText:
     self.text = text
     self.follow = follow
     self._depth = depth
-    self.lifespan = 200
+    self.lifespan = len(text) * 2
 
   def depth(self):
     return self._depth
