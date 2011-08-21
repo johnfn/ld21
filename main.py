@@ -88,8 +88,8 @@ class BigImage:
 
     if self.rect.x > 0: self.rect.x = 0
     if self.rect.y > 0: self.rect.y = 0
-    if self.rect.x < -self.rect.width: self.rect.x = self.rect.width
-    if self.rect.y < -self.rect.height: self.rect.y = self.rect.height
+    if self.rect.x < -self.rect.width: self.rect.x = -self.rect.width + ABS_MAP_SIZE
+    if self.rect.y < -self.rect.height: self.rect.y = -self.rect.height + ABS_MAP_SIZE
 
 class Image:
   def __init__(self, src_file, src_x, src_y, dst_x, dst_y):
