@@ -86,6 +86,11 @@ class BigImage:
     self.rect.x -= float(dx) * 35
     self.rect.y -= float(dy) * 35
 
+    if self.rect.x > 0: self.rect.x = 0
+    if self.rect.y > 0: self.rect.y = 0
+    if self.rect.x < -self.rect.width: self.rect.x = self.rect.width
+    if self.rect.y < -self.rect.height: self.rect.y = self.rect.height
+
 class Image:
   def __init__(self, src_file, src_x, src_y, dst_x, dst_y):
     self.old_values = (src_file, src_x, src_y)
@@ -1168,6 +1173,10 @@ class Game:
         if self.blurriness <= 0:
           self.dblurry = 0
           self.set_state(States.Normal)
+
+      blackness = pygame.Surface((ABS_MAP_SIZE * 2, ABS_MAP_SIZE * 2))
+      blackness.set_alpha(100)
+      self.buff.blit(blackness, blackness.get_rect())
 
       self.screen.blit(pygame.transform.scale(self.buff, (ABS_MAP_SIZE * 2, ABS_MAP_SIZE * 2)), self.buff.get_rect())
       UpKeys.flush()
