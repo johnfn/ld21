@@ -1,4 +1,5 @@
 import sys, pygame, time
+import math
 import random
 import spritesheet
 from wordwrap import render_textrect
@@ -392,7 +393,7 @@ class Character:
 
     # Flip code <ESC>
 
-    target = Updater.get_escape()
+    target = Updater.get_escape(self)
     if target is None: 
       # No escaper found in this map.
       if UpKeys.key_up(27):
@@ -462,7 +463,7 @@ class Character:
     else:
       screen.blit(pygame.transform.flip(self.img, True, False), self.rect)
 
-    if Updater.get_escape() is not None:
+    if Updater.get_escape(self) is not None:
       self.ghost.render(screen)
 
 class UpKeys:
@@ -610,6 +611,43 @@ class DialogStarter:
 
   def render(self, screen):
     pass
+
+class ParticleGenerator:
+  def __init__(self, rate):
+    self.rate = rate
+
+  def update(self):
+    if random.random() < self.rate:
+      Updater.add_updater(Particle((100, 100), 150))
+
+class Particle:
+  def __init__(self, coords, lifespan):
+    self.coords = coords
+    self.x, self.y = coords
+
+    self.max_age = lifespan
+    self.sprite = Image("particle.png", 0, 0, self.x, self.y)
+    self.age = lifespan * random.random() + 20
+    self.speed = random.random() 
+
+    self.base_x = self.x
+    self.wobble_factor = random.random() * 10
+
+  def depth(self):
+    return 0
+
+  def update(self):
+    self.age -= 1
+    self.y -= self.speed
+    self.x = self.base_x + math.sin(float(self.age / 20)) * self.wobble_factor * float(self.max_age - self.age) / self.max_age
+
+    #TODO: Do something with alpha.
+
+    return self.age > 0
+
+  def render(self, screen):
+    self.sprite.move(self.x, self.y)
+    self.sprite.render(screen)
 
 class Rotator:
   def __init__(self, coords):
@@ -854,10 +892,10 @@ class HoverText:
 
     my_font = pygame.font.Font(None, 14)
 
-    my_rect = pygame.Rect((self.follow.x - my_width / 2, self.follow.y - 40, my_width, 30))
+    my_rect = pygame.Rect((self.follow.x - my_width / 2, self.follow.y - len(self.text), my_width, 30))
     if my_rect.x < 0:
       my_rect.x = 0
-    rendered_text = render_textrect(self.text, my_font, my_rect, (10, 10, 10), (255, 255, 255), 0)
+    rendered_text = render_textrect(self.text, my_font, my_rect, (10, 10, 10), (255, 255, 255), 1)
 
     screen.blit(rendered_text, my_rect.topleft)
 
@@ -921,11 +959,19 @@ class Updater:
       item.render(screen)
 
   @staticmethod
-  def get_escape():
+  def get_escape(char):
+    targets = []
+
     for item in Updater.items:
       if hasattr(item, 'escape'):
         if item.escape():
-          return item
+          targets.append(item)
+    
+    if len(targets) == 0: return None
+
+    # Take first closest one.
+    return sorted(targets, key=lambda obj: math.sqrt( (obj.x - char.x) ** 2 + (obj.y - char.y) ** 2))[0]
+
 
   @staticmethod
   def remove_all(fn):
@@ -952,6 +998,7 @@ class Game:
     global background
     background = BigImage("background.png", 2)
     TileSheet.add("wall.png")
+    TileSheet.add("particle.png")
 
     self.char = Character(40, 40)
 
@@ -965,6 +1012,7 @@ class Game:
       self.state = States.Dialog
       Dialog.start_dialog((0, 0))
 
+    # self.partgen = ParticleGenerator(.4)
     Updater.add_updater(HUD(self.char))
 
   def set_state(self, state):
@@ -992,6 +1040,7 @@ class Game:
         if not Dialog.update(self.buff):
           self.state = States.Normal
       elif self.state == States.Normal:
+        # self.partgen.update()
         Updater.update_all()
         Updater.render_all(self.buff)
         self.char.update(pygame.key.get_pressed(), self.map, self)
