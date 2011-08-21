@@ -182,6 +182,9 @@ class Map:
     if rgb_triple == (200, 255, 0): # Enemy Escaper
       self.current_map.set_at(coords, NOTHING_COLOR)
       Updater.add_updater(Pickup(coords, "escaper", self.char))
+    if rgb_triple == (150, 150, 150): # Signpost 1
+      self.current_map.set_at(coords, NOTHING_COLOR)
+      Updater.add_updater(Pickup(coords, "signpost1", self.char))
 
   #got to update with abs
   def update_map(self, x, y, pos_abs=False):
@@ -287,6 +290,9 @@ class Character:
   def get_item(self, item_name):
     if item_name not in self.items:
       Dialog.start_dialog(item_name)
+    else:
+      if not item_name == "treasure":
+        return
 
     self.items.append(item_name)
 
@@ -537,6 +543,10 @@ class Dialog:
                                  ("Narrator", "That's awesome."),
                                  ("Narrator", "But it doesn't really seem to do anything."),
                               ],
+                 "signpost1": [ ("Narrator", "Hmm..."),
+                                ("Narrator", "The sign reads: "),
+                                ("Narrator", "Right: ESCAPE. Left: Certain death. Down: Even more certain death."),
+                              ],
                               }
   speaker = ""
   position = 0 # What is the first dialog we haven't seen yet?
@@ -557,7 +567,7 @@ class Dialog:
   # All the True/Falses here are pure paranoia. Pretty sure they do nothing.
   @staticmethod
   def start_dialog(speaker):
-    if DEBUG: return True
+    #if DEBUG: return True
     if speaker not in Dialog.all_dialog: return False
     Dialog.speaker = speaker
     Dialog.position = 0
@@ -711,6 +721,9 @@ class Pickup:
     if pickup_type == "treasure":
       self.sprite = Image("wall.png", 2, 3, self.x, self.y)
 
+    if pickup_type.startswith("signpost"):
+      self.sprite = Image("wall.png", 3, 2, self.x, self.y)
+
   @property
   def x(self):
     return self.rect.x
@@ -728,7 +741,10 @@ class Pickup:
   def update(self):
     if self.char.touching_item(self):
       self.char.get_item(self.pickup_type)
-      return False
+      if not self.pickup_type.startswith("signpost"):
+        return False
+      else:
+        return True
     else:
       return True
 
@@ -1070,7 +1086,7 @@ class Game:
     Dialog.begin(self)
 
     if DEBUG:
-      self.map = Map("map.png", [3, 2], self.char)
+      self.map = Map("map.png", [3, 1], self.char)
       self.state = States.Normal
     else:
       self.map = Map("map.png", [0, 0], self.char)
