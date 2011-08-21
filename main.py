@@ -83,8 +83,8 @@ class BigImage:
     screen.blit(self.img, self.rect)
 
   def parallax(self, dx, dy):
-    self.rect.x += float(dx) * 35
-    self.rect.y += float(dy) * 35
+    self.rect.x -= float(dx) * 35
+    self.rect.y -= float(dy) * 35
 
 class Image:
   def __init__(self, src_file, src_x, src_y, dst_x, dst_y):
@@ -160,7 +160,10 @@ class Map:
   def parse(self, coords, rgb_triple):
     if rgb_triple == (255, 0, 0): # Enemy
       self.current_map.set_at(coords, NOTHING_COLOR)
-      Updater.add_updater(Enemy(coords, self.char))
+      Updater.add_updater(Enemy(coords, self.char, self))
+    if rgb_triple == (100, 0, 0): # Enemy In Reverse
+      self.current_map.set_at(coords, NOTHING_COLOR)
+      Updater.add_updater(Enemy(coords, self.char, self)) #TODO?????????????
     if rgb_triple == (0, 255, 0): # Rotator
       self.current_map.set_at(coords, (255,255,255))
       Updater.add_updater(Rotator(coords))
@@ -274,8 +277,7 @@ class Character:
     self.flicker_tick = 0
 
     if DEBUG:
-      # self.items = ["escaper"]
-      self.items = []
+      self.items = ["escaper"]
     else:
       self.items = []
 
@@ -593,6 +595,9 @@ class Point:
     self.x = x
     self.y = y
 
+  def __cmp__(self, other):
+    return 0 if self.x == other.x and self.y == other.y else 1
+
   def __str__(self):
     return "<Point x : %f y : %f>" % (self.x, self.y)
 
@@ -812,7 +817,7 @@ class Stairs:
 class Enemy:
   # Example: {move: [1, 0], time: 60}, {move: [-1, 0], time: 60}
 
-  def __init__(self, coords, char, orders=None):
+  def __init__(self, coords, char, game_map, reverse=False):
     # Tweakable
     self.health = 1
     self.speed = 3
@@ -820,20 +825,21 @@ class Enemy:
     self.turnaround_time = 20 # (TODO) Ignoring this for now, see update
 
     # Not tweakable
+    self.game_map = game_map
     self.flicker_ticker = None
     self.char = char
     self.visible = True
 
-    if orders is None:
-      self.orders = [ {'move': Point(-1, 0), 'time': 60}
-                    , {'move': Point( 1, 0), 'time': 60}
-                    ]
+    self.orders = [ {'move': Point(-1, 0), 'time': 60}
+                  , {'move': Point( 1, 0), 'time': 60}
+                  ]
+
+    if reverse:
+      self.which_order = 1
     else:
-      self.orders = orders
+      self.which_order = 0
 
-    self.which_order = 0
-
-    self.move_dir = Point(-1, 0)
+    self.move_dir = Point(-1, 0) #self.orders[self.which_order]['move']
     new_coords = [coords[0] * TILE_SIZE, coords[1] * TILE_SIZE]
 
     self.sprite = Image("wall.png", 0, 1, *new_coords)
@@ -900,8 +906,16 @@ class Enemy:
     if self.visible:
       self.sprite.render(screen)
 
+      hide_rest = False
       for l_dist in range(1, self.los_dist + 1): #+ 1 so that we don't overlap with self
         self.los[l_dist - 1].move(self.x + TILE_SIZE * l_dist * self.move_dir.x, self.y + TILE_SIZE * l_dist * self.move_dir.y)
+
+        if Character.touching_wall(self.los[l_dist - 1].x, self.los[l_dist - 1].y, self.game_map):
+          hide_rest = True
+
+        if hide_rest:
+          self.los[l_dist - 1].move(-500,-500)
+
         self.los[l_dist - 1].render(screen)
 
 class HoverText:
@@ -1056,7 +1070,7 @@ class Game:
     Dialog.begin(self)
 
     if DEBUG:
-      self.map = Map("map.png", [2, 1], self.char)
+      self.map = Map("map.png", [3, 2], self.char)
       self.state = States.Normal
     else:
       self.map = Map("map.png", [0, 0], self.char)
