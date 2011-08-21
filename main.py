@@ -1086,7 +1086,7 @@ class Game:
     Dialog.begin(self)
 
     if DEBUG:
-      self.map = Map("map.png", [3, 1], self.char)
+      self.map = Map("map.png", [4, 1], self.char)
       self.state = States.Normal
     else:
       self.map = Map("map.png", [0, 0], self.char)
