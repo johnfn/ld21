@@ -280,7 +280,7 @@ class Character:
     self.flicker_tick = 0
 
     if DEBUG:
-      self.items = ["escaper"]
+      self.items = ["replicator", "escaper"]
     else:
       self.items = []
 
