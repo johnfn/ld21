@@ -13,6 +13,18 @@ NOTHING_COLOR = (255, 255, 255)
 
 ABS_MAP_SIZE = TILE_SIZE * MAP_SIZE
 
+background = None
+
+def blur_surf(surface, amt):
+    if amt < 1.0:
+        raise ValueError("Arg 'amt' must be greater than 1.0, passed in value is %s"%amt)
+    scale = 1.0/float(amt)
+    surf_size = surface.get_size()
+    scale_size = (int(surf_size[0]*scale), int(surf_size[1]*scale))
+    surf = pygame.transform.smoothscale(surface, scale_size)
+    surf = pygame.transform.smoothscale(surf, surf_size)
+    return surf
+
 def get_touching(x_abs, y_abs):
   """If a thing's upper (x,y) coords are x_abs, y_abs, then what tiles will
   it be touching?"""
@@ -51,6 +63,25 @@ def and_fn(bools):
 
 def or_fn(bools):
   return True in bools
+
+class BigImage:
+  def __init__(self, src_file, scale = 1):
+    self.img = pygame.image.load(src_file).convert()
+    self.width, self.height = dimensions = self.img.get_size()
+
+    if scale != 1:
+      new_surf = pygame.Surface((self.width * scale, self.height * scale))
+      pygame.transform.scale(self.img, (self.width * scale, self.height * scale), new_surf)
+      self.img = new_surf
+
+    self.rect = self.img.get_rect()
+
+  def render(self, screen):
+    screen.blit(self.img, self.rect)
+
+  def parallax(self, dx, dy):
+    self.rect.x += float(dx) * 35
+    self.rect.y += float(dy) * 35
 
 class Image:
   def __init__(self, src_file, src_x, src_y, dst_x, dst_y):
@@ -143,6 +174,9 @@ class Map:
     if rgb_triple == (200, 200, 0): # Replicator
       self.current_map.set_at(coords, NOTHING_COLOR)
       Updater.add_updater(Pickup(coords, "replicator", self.char))
+    if rgb_triple == (200, 255, 0): # Enemy Escaper
+      self.current_map.set_at(coords, NOTHING_COLOR)
+      Updater.add_updater(Pickup(coords, "escaper", self.char))
 
   #got to update with abs
   def update_map(self, x, y, pos_abs=False):
@@ -227,8 +261,6 @@ class Character:
     self.vx = 0
     self.vy = 0
 
-    self.has_enemy_escape = False
-
     self.health = 2
     self.max_health = 3
 
@@ -238,7 +270,11 @@ class Character:
     self.ghost = Image("wall.png", 1, 1, 0, 0)
 
     self.flicker_tick = 0
-    self.items = []
+
+    if DEBUG:
+      self.items = ["escaper"]
+    else:
+      self.items = []
 
     self.anim_ticker = 0
     self.left_facing = True
@@ -250,6 +286,9 @@ class Character:
 
   def has_replicator(self):
     return "replicator" in self.items
+
+  def has_escaper(self):
+    return "escaper" in self.items
 
   def flicker(self):
     self.flicker_tick = 50
@@ -285,10 +324,10 @@ class Character:
     return game_map.is_wall(*feet_position1) or game_map.is_wall(*feet_position2) or\
         Character.point_touching_updater(*feet_pos_abs1) or Character.point_touching_updater(*feet_pos_abs2)
 
-  def update(self, keys, game_map):
+  def update(self, keys, game_map, game):
     """ Move the character one tick. """
     new_screen = False
-
+    map_dx, map_dy = 0, 0
 
     on_stairs = len(Updater.get_all(lambda obj: isinstance(obj, Stairs) and self.touching_item(obj))) > 0
 
@@ -321,9 +360,10 @@ class Character:
       self.left_facing = (dx < 0)
 
     if not game_map.in_bounds_abs(self.x + dx, self.y + dy):
-      # I am more proud of this line than any other I have written in recent times.
-      game_map.update_map((self.x + dx)/(ABS_MAP_SIZE - TILE_SIZE),\
-                          (self.y + dy)/(ABS_MAP_SIZE - TILE_SIZE), False)
+      # I am more proud of these lines than any other I have written in recent times.
+      map_dx = (self.x + dx)/(ABS_MAP_SIZE - TILE_SIZE)
+      map_dy = (self.y + dy)/(ABS_MAP_SIZE - TILE_SIZE)
+      game_map.update_map(map_dx, map_dy, False)
 
       self.x += -((self.x + dx)/(ABS_MAP_SIZE - TILE_SIZE)) * (ABS_MAP_SIZE - TILE_SIZE)
       self.y += -((self.y + dy)/(ABS_MAP_SIZE - TILE_SIZE)) * (ABS_MAP_SIZE - TILE_SIZE)
@@ -346,6 +386,7 @@ class Character:
       self.on_ground = False
 
     if new_screen:
+      background.parallax(map_dx, map_dy)
       Updater.remove_all(lambda x: isinstance(x, Replicated))
       self.set_restore_point()
 
@@ -359,7 +400,7 @@ class Character:
         Updater.add_updater(HoverText("I can't.", self, 0))
 
       return
-    flipped_x = target.x * 2 - self.x
+    flipped_x = int(target.x * 2 - self.x)
 
     # Flip code. Probably should move to new function
     self.ghost.move(flipped_x, self.y)
@@ -381,6 +422,7 @@ class Character:
       # Leave a dead body!!!
       if self.has_replicator():
         Updater.add_updater(Replicated(old_coords, game_map, self))
+      game.set_state(States.Blurry)
 
   # On hurt or something
   def hurt(self, damage, dmg_type="enemy"):
@@ -450,8 +492,8 @@ class Dialog:
                               ("Narrator", "Except some jerks trapped you in this big weird looking facility."),
                               ("Narrator", "And you want to escape."),
                               ("Narrator", "You have one special talent though."),
-                              ("Narrator", "This talent is helped by glowing things like the one that you see."), # TODO crappy dialog lol
-                              ("Narrator", "Press ESC to activate your escape artist powers.")
+                              ("Narrator", "If the room has a glowing target in it (like this one conveniently does) then you can press ESC and teleport."),
+                              ("Narrator", "Try it out. You'll get the gist pretty fast, I bet."),
                              ],
                  (2, 0)    : [
                               ("Narrator", "That guy looks annoying."),
@@ -462,11 +504,14 @@ class Dialog:
                  "replicator": [ ("Narrator", "Ooh."),
                                  ("Narrator", "You seem to have found a nice shiny Replicator."),
                                  ("Narrator", "When you escape, you'll now leave a dead body of yourself behind."),
-                                 ("Game Maker", "What? The theme isn't self replication?"),
-                                 ("Game Maker", "Oh well"),
                                  ("Narrator", "This is great for escaping, since enemies will think that you're dead, when really..."),
                                  ("Narrator", "You've escaped!"),
                                  ("Narrator", "Also, you might be able to kill bad guys by dropping your dead bodies on them."),
+                              ],
+                 "escaper": [ ("Narrator", "Shiny!"),
+                                 ("Narrator", "You've found the Enemy Escaper!"),
+                                 ("Narrator", "Now, you can use enemies the same way as you were using the glowing targets."),
+                                 ("Narrator", "You can escape even better!"),
                               ],
                               }
   speaker = ""
@@ -596,7 +641,7 @@ class Pickup:
     self.pickup_type = pickup_type
     self.char = char
 
-    if pickup_type == "replicator":
+    if pickup_type == "replicator" or pickup_type == "escaper":
       self.sprite = Image("wall.png", 1, 2, self.x, self.y)
 
   @property
@@ -742,7 +787,7 @@ class Enemy:
     return 0
 
   def escape(self):
-    if self.char.has_enemy_escape:
+    if self.char.has_escaper():
       return Point(self.x, self.y)
     return False
 
@@ -893,6 +938,7 @@ class Updater:
 class States:
   Dialog = "Dialog"
   Normal = "Normal"
+  Blurry = "Blurry"
 
 class Game:
   def __init__(self):
@@ -900,8 +946,11 @@ class Game:
 
     pygame.display.init()
     pygame.font.init()
-    self.screen = pygame.display.set_mode((ABS_MAP_SIZE, ABS_MAP_SIZE))
+    self.screen = pygame.display.set_mode((ABS_MAP_SIZE * 2, ABS_MAP_SIZE * 2))
+    self.buff = pygame.Surface((ABS_MAP_SIZE, ABS_MAP_SIZE))
 
+    global background
+    background = BigImage("background.png", 2)
     TileSheet.add("wall.png")
 
     self.char = Character(40, 40)
@@ -918,6 +967,13 @@ class Game:
 
     Updater.add_updater(HUD(self.char))
 
+  def set_state(self, state):
+    if state == States.Blurry:
+      self.blurriness = 1
+      self.dblurry = 2
+
+    self.state = state
+
   def loop(self):
     while 1:
       for event in pygame.event.get():
@@ -927,20 +983,31 @@ class Game:
         if event.type == pygame.KEYUP:
           UpKeys.add_key(event.key)
       
-      self.screen.fill((255,255,255))
-      self.map.render(self.screen)
-      self.char.render(self.screen)
+      global background
+      background.render(self.buff)
+      self.map.render(self.buff)
+      self.char.render(self.buff)
 
       if self.state == States.Dialog:
-        if not Dialog.update(self.screen):
+        if not Dialog.update(self.buff):
           self.state = States.Normal
       elif self.state == States.Normal:
         Updater.update_all()
-        Updater.render_all(self.screen)
-        self.char.update(pygame.key.get_pressed(), self.map)
+        Updater.render_all(self.buff)
+        self.char.update(pygame.key.get_pressed(), self.map, self)
+      elif self.state == States.Blurry:
+        Updater.render_all(self.buff)
 
+        self.buff = blur_surf(self.buff, self.blurriness)
+        self.blurriness += self.dblurry
+        if self.blurriness >= 10:
+          self.dblurry *= -1
+        if self.blurriness <= 0:
+          self.dblurry = 0
+          self.set_state(States.Normal)
+
+      self.screen.blit(pygame.transform.scale(self.buff, (ABS_MAP_SIZE * 2, ABS_MAP_SIZE * 2)), self.buff.get_rect())
       time.sleep(.02)
-
       pygame.display.flip()
 
 g = Game()
