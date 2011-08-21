@@ -4,7 +4,7 @@ import random
 import spritesheet
 from wordwrap import render_textrect
 
-DEBUG = True
+DEBUG = False
 
 WALLS = [(0,0,0)]
 TILE_SIZE = 20
@@ -356,7 +356,7 @@ class Character:
 
     jumping = False
 
-    if keys[pygame.K_w] and self.on_ground:
+    if keys[pygame.K_SPACE] and self.on_ground:
       jumping = True
       self.vy = -self.jump_height
 
@@ -415,7 +415,7 @@ class Character:
     target = Updater.get_escape(self)
     if target is None: 
       # No escaper found in this map.
-      if UpKeys.key_up(27):
+      if UpKeys.key_up(27) or UpKeys.key_up(pygame.K_RSHIFT) or UpKeys.key_up(pygame.K_LSHIFT):
         Updater.add_updater(HoverText("I can't without a target.", self, 0))
       return
 
@@ -423,7 +423,7 @@ class Character:
 
     # Flip code. Probably should move to new function
     self.ghost.move(flipped_x, self.y)
-    if UpKeys.key_up(27):
+    if UpKeys.key_up(27) or UpKeys.key_up(pygame.K_RSHIFT) or UpKeys.key_up(pygame.K_LSHIFT):
       if abs(flipped_x - self.x) < TILE_SIZE + 1 and self.has_replicator():
         Updater.add_updater(HoverText("My own dead body would kill me!", self, 0))
         return
@@ -518,7 +518,9 @@ class Dialog:
                               ("Narrator", "And you want to escape."),
                               ("Narrator", "You have one special talent though."),
                               ("Narrator", "If the room has a glowing target in it (like this one conveniently does) then you can press ESC and teleport."),
+                              ("Narrator", "(ESC is sometimes inconvenient, so try Shift too)"),
                               ("Narrator", "Try it out. You'll get the gist pretty fast, I bet."),
+                              ("Narrator", "By the way: Move around with WASD, jump with Space."),
                              ],
                  (2, 0)    : [
                               ("Narrator", "That guy looks annoying."),
@@ -542,6 +544,7 @@ class Dialog:
                                  ("Narrator", "You found gold!"),
                                  ("Narrator", "That's awesome."),
                                  ("Narrator", "But it doesn't really seem to do anything."),
+                                 ("Narrator", "...Except look awesome."),
                               ],
                  "signpost1": [ ("Narrator", "Hmm..."),
                                 ("Narrator", "The sign reads: "),
@@ -592,7 +595,7 @@ class Dialog:
     speaker, dialog = Dialog.all_dialog[Dialog.speaker][Dialog.position]
 
     my_rect = pygame.Rect((60, ABS_MAP_SIZE - 100, 300, 40))
-    rendered_text = render_textrect(dialog, my_font, my_rect, (10, 10, 10), (210, 255, 255), 0)
+    rendered_text = render_textrect(dialog, my_font, my_rect, (10, 10, 10), (210, 255, 255), True, 0)
 
     screen.blit(rendered_text, my_rect.topleft)
     return True
@@ -957,7 +960,7 @@ class HoverText:
     my_rect = pygame.Rect((self.follow.x - my_width / 2, self.follow.y - len(self.text), my_width, 30))
     if my_rect.x < 0:
       my_rect.x = 0
-    rendered_text = render_textrect(self.text, my_font, my_rect, (10, 10, 10), (255, 255, 255), 1)
+    rendered_text = render_textrect(self.text, my_font, my_rect, (10, 10, 10), (255, 255, 255), False, 1)
 
     screen.blit(rendered_text, my_rect.topleft)
 
@@ -1137,6 +1140,7 @@ class Game:
           self.set_state(States.Normal)
 
       self.screen.blit(pygame.transform.scale(self.buff, (ABS_MAP_SIZE * 2, ABS_MAP_SIZE * 2)), self.buff.get_rect())
+      UpKeys.flush()
       time.sleep(.02)
       pygame.display.flip()
 
