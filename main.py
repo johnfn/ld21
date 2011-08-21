@@ -16,6 +16,7 @@ ABS_MAP_SIZE = TILE_SIZE * MAP_SIZE
 
 background = None
 land_sound = None
+escape_sound = None
 
 def blur_surf(surface, amt):
     if amt < 1.0:
@@ -281,10 +282,10 @@ class Character:
     self.left_facing = True
 
   def get_item(self, item_name):
-    self.items.append(item_name)
-
     if item_name not in self.items:
       Dialog.start_dialog(item_name)
+
+    self.items.append(item_name)
 
   @property
   def gold(self):
@@ -427,6 +428,7 @@ class Character:
       else:
         self.x = new_x
 
+      escape_sound.play()
       # Leave a dead body!!!
       if self.has_replicator():
         Updater.add_updater(Replicated(old_coords, game_map, self))
@@ -734,6 +736,7 @@ class Replicated:
     self.age = 0
     self.visible = True
     self.uid = random.random() # about 80 bits of entropy. We should be fine... I hope
+    self.on_ground = False
 
   def __str__(self):
     return "<Replicator x: %d y: %d>" % (self.x, self.y)
@@ -755,7 +758,12 @@ class Replicated:
       if Character.touching_wall(self.x, self.y, self.game_map, self.uid) or generic_touching(self, self.char):
         self.y -= 1
         self.vy = 0
+        if not self.on_ground:
+          land_sound.play()
+        self.on_ground = True
         break
+      else:
+        self.on_ground = False
 
     enemy_deaths = Updater.get_all(lambda obj: isinstance(obj, Enemy) and generic_touching(self, obj))
 
@@ -956,7 +964,6 @@ class Updater:
 
   @staticmethod
   def add_updater(updater):
-    print "adding"
     Updater.items.append(updater)
 
   @staticmethod
@@ -1022,6 +1029,9 @@ class Game:
 
       global land_sound
       land_sound = pygame.mixer.Sound("land.wav")
+
+      global escape_sound
+      escape_sound = pygame.mixer.Sound("escape.wav")
 
 
     self.screen = pygame.display.set_mode((ABS_MAP_SIZE * 2, ABS_MAP_SIZE * 2))
