@@ -18,6 +18,15 @@ background = None
 land_sound = None
 escape_sound = None
 
+def rot_center(image, angle):
+    """rotate an image while keeping its center and size"""
+    orig_rect = image.get_rect()
+    rot_image = pygame.transform.rotate(image, angle)
+    rot_rect = orig_rect.copy()
+    rot_rect.center = rot_image.get_rect().center
+    rot_image = rot_image.subsurface(rot_rect).copy()
+    return rot_image
+
 def blur_surf(surface, amt):
     if amt < 1.0:
         raise ValueError("Arg 'amt' must be greater than 1.0, passed in value is %s"%amt)
@@ -101,6 +110,9 @@ class Image:
     self.rect.x = dst_x
     self.rect.y = dst_y
 
+    self.base_w = self.img.get_width()
+    self.base_h = self.img.get_height()
+
   @property
   def x(self):
     return self.rect.x
@@ -109,8 +121,19 @@ class Image:
   def y(self):
     return self.rect.y
 
-  def render(self, screen):
-    screen.blit(self.img, self.rect)
+  def render(self, screen, scale = 1, rotation = 0):
+    rect = self.rect
+
+    if scale != 1:
+      self.img = pygame.transform.scale(self.img, (self.base_w * scale, self.base_h * scale))
+      rect[0] -= self.base_w / scale
+      rect[1] -= self.base_h / scale
+
+    if rotation != 0:
+      rotated = rot_center(self.img, rotation)
+      screen.blit(rotated, rect)
+    else:
+      screen.blit(self.img, rect)
 
   def move(self, new_x, new_y):
     self.rect.x = new_x
@@ -727,6 +750,25 @@ class Particle:
     self.sprite.move(self.x, self.y)
     self.sprite.render(screen)
 
+class Indicator:
+  def __init__(self, char):
+    self.char = char
+    self.sprite = Image("wall.png", 2, 4, 0, 0)
+    self.rotation = 0
+  
+  def depth(self):
+    return 20
+
+  def update(self):
+    return True
+
+  def render(self, screen):
+    target = Updater.get_escape(self.char)
+    if target is not None:
+      self.rotation += 2
+      self.sprite.move(target.x, target.y)
+      self.sprite.render(screen, 2, self.rotation)
+
 class Rotator:
   def __init__(self, coords):
     self.coords = coords
@@ -1142,6 +1184,9 @@ class Game:
 
     # self.partgen = ParticleGenerator(.4)
     Updater.add_updater(HUD(self.char))
+
+    # Add indicator
+    Updater.add_updater(Indicator(self.char))
 
   def set_state(self, state):
     if state == States.Blurry:
