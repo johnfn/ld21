@@ -1159,18 +1159,21 @@ class Game:
       global background
       background.render(self.buff)
       self.map.render(self.buff)
-      self.char.render(self.buff)
 
       if self.state == States.Dialog:
+        Updater.render_all(self.buff)
+        self.char.render(self.buff)
         if not Dialog.update(self.buff):
           self.state = States.Normal
       elif self.state == States.Normal:
         # self.partgen.update()
         Updater.update_all()
         Updater.render_all(self.buff)
+        self.char.render(self.buff)
         self.char.update(pygame.key.get_pressed(), self.map, self)
       elif self.state == States.Blurry:
         Updater.render_all(self.buff)
+        self.char.render(self.buff)
 
         self.buff = blur_surf(self.buff, self.blurriness)
         self.blurriness += self.dblurry
@@ -1181,6 +1184,7 @@ class Game:
           self.set_state(States.Normal)
       elif self.state == States.Death:
         Updater.render_all(self.buff)
+        self.char.render(self.buff)
 
         blackness = pygame.Surface((ABS_MAP_SIZE * 2, ABS_MAP_SIZE * 2))
         blackness.set_alpha(self.death)
