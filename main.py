@@ -367,6 +367,13 @@ class Character:
       # Disregard all physics. YOU ARE SUPERMAN.
       self.vy = (keys[pygame.K_s] - keys[pygame.K_w]) * self.speed
 
+      if self.vy != 0:
+        self.anim_ticker += 1
+        if self.anim_ticker / 5 % 2 == 0:
+          self.img = TileSheet.get("wall.png", 0, 4)
+        else:
+          self.img = TileSheet.get("wall.png", 1, 4)
+
     jumping = False
 
     if keys[pygame.K_SPACE] and self.on_ground:
