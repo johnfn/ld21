@@ -232,13 +232,16 @@ class Character:
     self.health = 2
     self.max_health = 3
 
-    self.img = TileSheet.get("wall.png", 1, 0)
+    self.img = TileSheet.get("wall.png", 0, 3)
     self.rect = self.img.get_rect()
 
     self.ghost = Image("wall.png", 1, 1, 0, 0)
 
     self.flicker_tick = 0
     self.items = []
+
+    self.anim_ticker = 0
+    self.left_facing = True
 
   def get_item(self, item_name):
     self.items.append(item_name)
@@ -307,6 +310,15 @@ class Character:
 
     dx = (keys[pygame.K_d] - keys[pygame.K_a]) * self.speed + self.vx
     dy =                                                    + self.vy
+
+    if dx != 0:
+      self.anim_ticker += 1
+      if self.anim_ticker / 5 % 2 == 0:
+        self.img = TileSheet.get("wall.png", 0, 3)
+      else:
+        self.img = TileSheet.get("wall.png", 1, 3)
+
+      self.left_facing = (dx < 0)
 
     if not game_map.in_bounds_abs(self.x + dx, self.y + dy):
       # I am more proud of this line than any other I have written in recent times.
@@ -380,6 +392,9 @@ class Character:
     Updater.add_updater(HoverText(message, self, 0))
 
     if dmg_type == "enemy":
+      #TODO
+      # Updater.add_updater(Replicated(old_coords, game_map, self))
+
       self.x = self.restore_x
       self.y = self.restore_y
 
@@ -400,7 +415,10 @@ class Character:
       if self.flicker_tick % 3 == 0:
         return
 
-    screen.blit(self.img, self.rect)
+    if self.left_facing:
+      screen.blit(self.img, self.rect)
+    else:
+      screen.blit(pygame.transform.flip(self.img, True, False), self.rect)
 
     if Updater.get_escape() is not None:
       self.ghost.render(screen)
