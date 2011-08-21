@@ -397,8 +397,7 @@ class Character:
     if target is None: 
       # No escaper found in this map.
       if UpKeys.key_up(27):
-        #TODO: Better reason why not?
-        Updater.add_updater(HoverText("I can't.", self, 0))
+        Updater.add_updater(HoverText("I can't without a target.", self, 0))
 
       return
     flipped_x = int(target.x * 2 - self.x)
@@ -843,6 +842,7 @@ class Enemy:
     for eyesight in (self.los + [self]):
       if self.char.touching_item(eyesight):
         self.char.hurt(1, "enemy")
+        Updater.add_updater(HoverText("Intruder!", self, 0))
 
     # Is it all whole numbers
     if self.move_dir.is_simple():
@@ -935,6 +935,7 @@ class Updater:
 
   @staticmethod
   def add_updater(updater):
+    print "adding"
     Updater.items.append(updater)
 
   @staticmethod
