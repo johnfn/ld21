@@ -15,6 +15,7 @@ NOTHING_COLOR = (255, 255, 255)
 ABS_MAP_SIZE = TILE_SIZE * MAP_SIZE
 
 background = None
+land_sound = None
 
 def blur_surf(surface, amt):
     if amt < 1.0:
@@ -382,6 +383,9 @@ class Character:
     for x in range(abs(dy)):
       self.y += sign(dy)
       if Character.touching_wall(self.x, self.y, game_map):
+        if not self.on_ground:
+          land_sound.play()
+
         self.y -= sign(dy)
         self.on_ground = True
         self.vy = 0
@@ -1012,12 +1016,17 @@ class Game:
     pygame.font.init()
 
     if not DEBUG:
-      pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=4096)
+      pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=1024)
       pygame.mixer.music.load('ludumherp.mp3')
       pygame.mixer.music.play(-1) #Infinite loops! HAHAH!
 
+      global land_sound
+      land_sound = pygame.mixer.Sound("land.wav")
+
+
     self.screen = pygame.display.set_mode((ABS_MAP_SIZE * 2, ABS_MAP_SIZE * 2))
     self.buff = pygame.Surface((ABS_MAP_SIZE, ABS_MAP_SIZE))
+
 
     global background
     background = BigImage("background.png", 2)
