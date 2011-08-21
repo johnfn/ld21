@@ -385,7 +385,8 @@ class Character:
       self.y += sign(dy)
       if Character.touching_wall(self.x, self.y, game_map):
         if not self.on_ground:
-          land_sound.play()
+          if not DEBUG:
+            land_sound.play()
 
         self.y -= sign(dy)
         self.on_ground = True
@@ -407,9 +408,14 @@ class Character:
       # No escaper found in this map.
       if UpKeys.key_up(27):
         Updater.add_updater(HoverText("I can't without a target.", self, 0))
-
       return
-    flipped_x = int(target.x * 2 - self.x)
+
+    if self.x < target.x:
+      flipped_x = ABS_MAP_SIZE - (float(self.x)/target.x) * (ABS_MAP_SIZE - target.x)
+    else:
+      flipped_x = target.x - (float(self.x - target.x)/(ABS_MAP_SIZE - target.x)) * (target.x)
+
+    flipped_x = int(flipped_x)
 
     # Flip code. Probably should move to new function
     self.ghost.move(flipped_x, self.y)
@@ -428,7 +434,8 @@ class Character:
       else:
         self.x = new_x
 
-      escape_sound.play()
+      if not DEBUG:
+        escape_sound.play()
       # Leave a dead body!!!
       if self.has_replicator():
         Updater.add_updater(Replicated(old_coords, game_map, self))
@@ -759,7 +766,8 @@ class Replicated:
         self.y -= 1
         self.vy = 0
         if not self.on_ground:
-          land_sound.play()
+          if not DEBUG:
+            land_sound.play()
         self.on_ground = True
         break
       else:
