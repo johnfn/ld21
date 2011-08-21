@@ -4,7 +4,7 @@ import random
 import spritesheet
 from wordwrap import render_textrect
 
-DEBUG = False
+DEBUG = True
 
 WALLS = [(0,0,0)]
 TILE_SIZE = 20
@@ -172,7 +172,7 @@ class Map:
       Updater.add_updater(Pickup(coords, "treasure", self.char))
     if rgb_triple == (150,90,60): # Dialog
       self.current_map.set_at(coords, NOTHING_COLOR)
-      Updater.add_updater(DialogStarter(coords, self.char, rgb_triple, self.map_coords))
+      Updater.add_updater(DialogStarter(coords, self.char, rgb_triple, self.map_coords, self))
     if rgb_triple == (0,0,255): # Stairs
       self.current_map.set_at(coords, NOTHING_COLOR)
       Updater.add_updater(Stairs(coords))
@@ -269,7 +269,10 @@ class Character:
     self.vx = 0
     self.vy = 0
 
-    self.health = 2
+    if DEBUG:
+      self.health = 1
+    else:
+      self.health = 3
     self.max_health = 3
 
     self.img = TileSheet.get("wall.png", 0, 3)
@@ -341,6 +344,10 @@ class Character:
         Character.point_touching_updater(*feet_pos_abs1) or Character.point_touching_updater(*feet_pos_abs2)
 
   def update(self, keys, game_map, game):
+    if self.health < 0:
+      self.death(game_map)
+      return #dead
+
     """ Move the character one tick. """
     new_screen = False
     map_dx, map_dy = 0, 0
@@ -449,8 +456,8 @@ class Character:
         Updater.add_updater(Replicated(old_coords, game_map, self))
       game.set_state(States.Blurry)
 
-  # On hurt or something
-  def hurt(self, damage, dmg_type="enemy"):
+  # On hurt or something. returns True on death
+  def hurt(self, damage, dmg_type, game_map):
     self.health -= damage
 
     self.flicker()
@@ -467,6 +474,22 @@ class Character:
 
       self.vx = 0
       self.vy = 0
+
+    return False
+
+  def set_death_point(self, game_map):
+    self.res_death = {'x' : self.x, 'y' : self.y, 
+                      'mx' : game_map.map_coords[0], 'my' : game_map.map_coords[1]}
+
+  def death(self, game_map):
+    self.health = self.max_health 
+    self.x = self.res_death['x']
+    self.y = self.res_death['y']
+
+    self.vx = 0
+    self.vy = 0
+
+    game_map.update_map(self.res_death['mx'], self.res_death['my'], True)
 
   def set_restore_point(self):
     self.restore_x = self.x
@@ -534,6 +557,7 @@ class Dialog:
                                  ("Narrator", "This is great for escaping, since enemies will think that you're dead, when really..."),
                                  ("Narrator", "You've escaped!"),
                                  ("Narrator", "Also, you might be able to kill bad guys by dropping your dead bodies on them."),
+                                 ("Narrator", "And the mechanics of just having a dead body lying around might be interesting."),
                               ],
                  "escaper": [ ("Narrator", "Shiny!"),
                                  ("Narrator", "You've found the Enemy Escaper!"),
@@ -621,12 +645,13 @@ class Point:
 
 # When you touch this, you start a dialog.
 class DialogStarter:
-  def __init__(self, coords, char, dlg_type, map_coords):
+  def __init__(self, coords, char, dlg_type, map_coords, game_map):
     self.map_coords = tuple(map_coords)
     self.coords = coords
     self.x, self.y = [x * TILE_SIZE for x in coords]
     self.char = char
     self.dlg_type = dlg_type
+    self.game_map = game_map
 
   def depth(self):
     return 0
@@ -640,6 +665,7 @@ class DialogStarter:
       self.kill_lambda = lambda x: isinstance(x, DialogStarter) and x.dlg_type == self.dlg_type
 
       self.new_state = States.Dialog
+      self.char.set_death_point(self.game_map)
       Dialog.start_dialog(self.map_coords)
       return True
 
@@ -898,7 +924,9 @@ class Enemy:
     # TODO: Include this object too, not just its sight range
     for eyesight in (self.los + [self]):
       if self.char.touching_item(eyesight):
-        self.char.hurt(1, "enemy")
+        if self.char.hurt(1, "enemy", self.game_map):
+          return True
+
         Updater.add_updater(HoverText("Intruder!", self, 0))
 
     # Is it all whole numbers
@@ -1089,12 +1117,14 @@ class Game:
     Dialog.begin(self)
 
     if DEBUG:
-      self.map = Map("map.png", [4, 1], self.char)
+      self.map = Map("map.png", [3, 1], self.char)
       self.state = States.Normal
     else:
       self.map = Map("map.png", [0, 0], self.char)
       self.state = States.Dialog
       Dialog.start_dialog((0, 0))
+
+    self.char.set_death_point(self.map)
 
     # self.partgen = ParticleGenerator(.4)
     Updater.add_updater(HUD(self.char))
