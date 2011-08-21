@@ -1,4 +1,5 @@
 import sys, pygame, time
+import time
 import math
 import random
 import spritesheet
@@ -6,18 +7,28 @@ from wordwrap import render_textrect
 
 DEBUG = True
 
+# constants
+
 WALLS = [(0,0,0)]
 TILE_SIZE = 20
 MAP_SIZE = 20
+DEATH_COUNT = 0
+START_TIME = time.time()
 
 NOTHING_COLOR = (255, 255, 255)
 
 ABS_MAP_SIZE = TILE_SIZE * MAP_SIZE
 
+# images
+
 background = None
+
+# sound fx
+
 land_sound = None
 escape_sound = None
 
+# Following 2 methods found online.
 def rot_center(image, angle):
     """rotate an image while keeping its center and size"""
     orig_rect = image.get_rect()
@@ -518,6 +529,9 @@ class Character:
                       'mx' : game_map.map_coords[0], 'my' : game_map.map_coords[1]}
 
   def death(self, game_map):
+    global DEATH_COUNT
+    DEATH_COUNT += 1
+
     self.health = self.max_health 
     self.x = self.res_death['x']
     self.y = self.res_death['y']
@@ -526,6 +540,8 @@ class Character:
     self.vy = 0
 
     game_map.update_map(self.res_death['mx'], self.res_death['my'], True)
+
+    Updater.remove_all(lambda x: isinstance(x, HoverText))
 
   def set_restore_point(self):
     self.restore_x = self.x
@@ -1139,6 +1155,7 @@ class States:
   Normal = "Normal"
   Blurry = "Blurry"
   Death = "Death"
+  GameOver = "GameOver"
 
 class Game:
   def __init__(self):
@@ -1146,11 +1163,12 @@ class Game:
 
     pygame.display.init()
     pygame.font.init()
+    pygame.font.init()
 
     if not DEBUG:
       pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=1024)
       pygame.mixer.music.load('ludumherp.mp3')
-      pygame.mixer.music.play(-1) #Infinite loops! HAHAH!
+      pygame.mixer.music.play(-1) #Infinite loop! HAHAH!
 
       global land_sound
       land_sound = pygame.mixer.Sound("land.wav")
@@ -1173,7 +1191,7 @@ class Game:
     Dialog.begin(self)
 
     if DEBUG:
-      self.map = Map("map.png", [3, 1], self.char)
+      self.map = Map("map.png", [0, 2], self.char)
       self.state = States.Normal
     else:
       self.map = Map("map.png", [0, 0], self.char)
@@ -1197,9 +1215,14 @@ class Game:
       self.death = 230
       self.ddeath = 10
 
+    if state == States.GameOver:
+      self.finished_time = time.time()
+
     self.state = state
 
   def loop(self):
+    # self.set_state(States.GameOver)
+
     while 1:
       for event in pygame.event.get():
         if event.type == pygame.QUIT: 
@@ -1248,6 +1271,26 @@ class Game:
         if self.death <= 0:
           self.ddeath = 0
           self.set_state(States.Normal)
+      elif self.state == States.GameOver:
+
+        my_font = pygame.font.Font(None, 14)
+        elapsed = "%d minutes, %d seconds." % (int((self.finished_time - START_TIME)/60), int(self.finished_time - START_TIME) % 60)
+        gameover = """
+        You win!
+
+
+
+
+
+
+        Elapsed time: %s
+
+        Deaths: %d
+
+        Percentage complete: %d%""" % (elapsed, DEATH_COUNT, int(100 * self.char.gold / 7))
+
+        my_rect = self.buff.get_rect()
+        self.buff = render_textrect(gameover, my_font, my_rect, (10, 10, 10), (210, 255, 255), True, 0)
 
       self.screen.blit(pygame.transform.scale(self.buff, (ABS_MAP_SIZE * 2, ABS_MAP_SIZE * 2)), self.buff.get_rect())
       UpKeys.flush()
