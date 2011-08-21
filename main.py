@@ -160,12 +160,11 @@ class Map:
       self.current_map.set_at(coords, NOTHING_COLOR)
       Updater.add_updater(Enemy(coords, self.char))
     if rgb_triple == (0, 255, 0): # Rotator
-      self.current_map.set_at(coords, NOTHING_COLOR)
+      self.current_map.set_at(coords, (255,255,255))
       Updater.add_updater(Rotator(coords))
     if rgb_triple == (255, 255, 0): # Treasure
       self.current_map.set_at(coords, NOTHING_COLOR)
-      # TODO
-      # Use Pickup
+      Updater.add_updater(Pickup(coords, "treasure", self.char))
     if rgb_triple == (150,90,60): # Dialog
       self.current_map.set_at(coords, NOTHING_COLOR)
       Updater.add_updater(DialogStarter(coords, self.char, rgb_triple, self.map_coords))
@@ -283,7 +282,12 @@ class Character:
   def get_item(self, item_name):
     self.items.append(item_name)
 
-    Dialog.start_dialog(item_name)
+    if item_name not in self.items:
+      Dialog.start_dialog(item_name)
+
+  @property
+  def gold(self):
+    return self.items.count("treasure")
 
   def has_replicator(self):
     return "replicator" in self.items
@@ -513,6 +517,11 @@ class Dialog:
                                  ("Narrator", "Now, you can use enemies the same way as you were using the glowing targets."),
                                  ("Narrator", "You can escape even better!"),
                               ],
+                 "treasure": [ ("Narrator", "GOLD!"),
+                                 ("Narrator", "You found gold!"),
+                                 ("Narrator", "That's awesome."),
+                                 ("Narrator", "But it doesn't really seem to do anything."),
+                              ],
                               }
   speaker = ""
   position = 0 # What is the first dialog we haven't seen yet?
@@ -680,6 +689,9 @@ class Pickup:
 
     if pickup_type == "replicator" or pickup_type == "escaper":
       self.sprite = Image("wall.png", 1, 2, self.x, self.y)
+
+    if pickup_type == "treasure":
+      self.sprite = Image("wall.png", 2, 3, self.x, self.y)
 
   @property
   def x(self):
@@ -903,6 +915,7 @@ class HUD:
   def __init__(self, follow):
     self._depth = 20
     self.hearts = []
+    self.treasures = []
     self.follow = follow
 
     for x in range(3):
@@ -912,6 +925,9 @@ class HUD:
     return self._depth
 
   def update(self):
+    while len(self.treasures) < self.follow.gold:
+      self.treasures.append(Image("wall.png", 2, 3, 20 + len(self.treasures) * 20, 40))
+
     for x in range(len(self.hearts)):
       if self.follow.health > x:
         self.hearts[x].update("wall.png", 2, 0)
@@ -922,6 +938,7 @@ class HUD:
 
   def render(self, screen):
     [heart.render(screen) for heart in self.hearts]
+    [treasure.render(screen) for treasure in self.treasures]
 
 class Updater:
   # Update each item every step (until it kills itself)
