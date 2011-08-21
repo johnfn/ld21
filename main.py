@@ -351,6 +351,7 @@ class Character:
   def update(self, keys, game_map, game):
     if self.health < 0:
       self.death(game_map)
+      game.set_state(States.Death)
       return #dead
 
     """ Move the character one tick. """
@@ -1088,6 +1089,7 @@ class States:
   Dialog = "Dialog"
   Normal = "Normal"
   Blurry = "Blurry"
+  Death = "Death"
 
 class Game:
   def __init__(self):
@@ -1139,6 +1141,10 @@ class Game:
       self.blurriness = 1
       self.dblurry = 2
 
+    if state == States.Death:
+      self.death = 230
+      self.ddeath = 10
+
     self.state = state
 
   def loop(self):
@@ -1173,10 +1179,19 @@ class Game:
         if self.blurriness <= 0:
           self.dblurry = 0
           self.set_state(States.Normal)
+      elif self.state == States.Death:
+        Updater.render_all(self.buff)
 
-      blackness = pygame.Surface((ABS_MAP_SIZE * 2, ABS_MAP_SIZE * 2))
-      blackness.set_alpha(100)
-      self.buff.blit(blackness, blackness.get_rect())
+        blackness = pygame.Surface((ABS_MAP_SIZE * 2, ABS_MAP_SIZE * 2))
+        blackness.set_alpha(self.death)
+        self.buff.blit(blackness, blackness.get_rect())
+
+        self.death += self.ddeath
+        if self.death >= 240:
+          self.ddeath *= -1
+        if self.death <= 0:
+          self.ddeath = 0
+          self.set_state(States.Normal)
 
       self.screen.blit(pygame.transform.scale(self.buff, (ABS_MAP_SIZE * 2, ABS_MAP_SIZE * 2)), self.buff.get_rect())
       UpKeys.flush()
