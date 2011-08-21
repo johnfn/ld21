@@ -394,6 +394,10 @@ class Character:
 
     on_stairs = len(Updater.get_all(lambda obj: isinstance(obj, Stairs) and self.touching_item(obj))) > 0
 
+    if DEBUG:
+      if keys[pygame.K_q]:
+        game.set_state(States.GameOver)
+
     # Movement code
 
     self.vy += 1
@@ -1283,11 +1287,11 @@ class Game:
 
 
 
-        Elapsed time: %s
+        elapsed time: %s
 
-        Deaths: %d
+        deaths: %d
 
-        Percentage complete: %d%""" % (elapsed, DEATH_COUNT, int(100 * self.char.gold / 7))
+        percentage complete (gold): %d%%""" % (elapsed, DEATH_COUNT, int(100 * self.char.gold / 7))
 
         my_rect = self.buff.get_rect()
         self.buff = render_textrect(gameover, my_font, my_rect, (10, 10, 10), (210, 255, 255), True, 0)
