@@ -5,7 +5,7 @@ import random
 import spritesheet
 from wordwrap import render_textrect
 
-DEBUG = True
+DEBUG = False
 
 # constants
 
