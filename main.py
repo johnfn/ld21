@@ -322,7 +322,10 @@ class Character:
     self.restore_y = self.y
 
     self.vx = 0
-    self.vy = 0
+    if DEBUG:
+      self.vy = 20
+    else:
+      self.vy = 0
 
     if DEBUG:
       self.health = 1
@@ -439,7 +442,7 @@ class Character:
       self.vy = -self.jump_height
 
     # A bit of a hack to correct for speedy falling (where you fall through blocks).
-    if self.vy > TILE_SIZE: self.vy = TILE_SIZE * sign(self.vy)
+    if self.vy > TILE_SIZE - 1: self.vy = TILE_SIZE * sign(self.vy) - 1
 
     dx = (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * self.speed + self.vx
     dy =                                                    + self.vy
@@ -1337,14 +1340,14 @@ class Game:
     TileSheet.add("particle.png")
 
     if DEBUG:
-      self.char = Character(160, 40)
+      self.char = Character(120, 40)
     else:
       self.char = Character(40, 40)
 
     Dialog.begin(self)
 
     if DEBUG:
-      self.map = Map("map.png", [4, 1], self.char, self)
+      self.map = Map("map.png", [2, 1], self.char, self)
       self.state = States.Normal
     else:
       self.map = Map("map.png", [0, 0], self.char, self)
