@@ -5,7 +5,7 @@ import random
 import spritesheet
 from wordwrap import render_textrect
 
-DEBUG = False
+DEBUG = True
 
 # constants
 
@@ -538,7 +538,7 @@ class Character:
 
     if dmg_type == "enemy":
       #TODO
-      # Updater.add_updater(Replicated(old_coords, game_map, self))
+      # Updater.add_updater(Replicated((self.x, self.y), game_map, self))
 
       self.x = self.restore_x
       self.y = self.restore_y
@@ -650,10 +650,10 @@ class Dialog:
                                  ("Narrator", "You can escape even better!"),
                               ],
                  "treasure": [ ("Narrator", "GOLD!"),
-                                 ("Narrator", "You found gold!"),
-                                 ("Narrator", "That's awesome."),
-                                 ("Narrator", "But it doesn't really seem to do anything."),
-                                 ("Narrator", "...Except look awesome."),
+                               ("Narrator", "You found gold!"),
+                               ("Narrator", "That's awesome."),
+                               ("Narrator", "But it doesn't really seem to do anything."),
+                               ("Narrator", "...Except be awesome."),
                               ],
                  "signpost1": [ ("Narrator", "Hmm..."),
                                 ("Narrator", "The sign reads: "),
@@ -945,17 +945,21 @@ class Replicated:
 
     enemy_deaths = Updater.get_all(lambda obj: isinstance(obj, Enemy) and generic_touching(self, obj))
     boss_hits = []
-    if not self.actually_bomb:
-      boss_hits = Updater.get_all(lambda obj: isinstance(obj, Boss) and generic_touching(self, obj))
+    boss_hits = Updater.get_all(lambda obj: isinstance(obj, Boss) and generic_touching(self, obj))
+
 
     for enemy in enemy_deaths:
       enemy.damage(1)
       self.age = 150
 
     #Dumb.
-    for boss in boss_hits:
-      boss.damage(1)
-      self.age = 150
+    if self.actually_bomb:
+      if len(boss_hits) > 0:
+        self.age = 150
+    else:
+      for boss in boss_hits:
+        boss.damage(1)
+        self.age = 150
 
     # finally
     self.sprite.move(self.x, self.y)
@@ -1030,6 +1034,9 @@ class Boss:
 
   def depth(self):
     return 0
+
+  def cacheable(self):
+    pass
 
   def update(self):
     curr = self.orders[self.order]
@@ -1327,12 +1334,15 @@ class Game:
     TileSheet.add("wall.png")
     TileSheet.add("particle.png")
 
-    self.char = Character(40, 40)
+    if DEBUG:
+      self.char = Character(160, 40)
+    else:
+      self.char = Character(40, 40)
 
     Dialog.begin(self)
 
     if DEBUG:
-      self.map = Map("map.png", [2, 3], self.char, self)
+      self.map = Map("map.png", [4, 1], self.char, self)
       self.state = States.Normal
     else:
       self.map = Map("map.png", [0, 0], self.char, self)
