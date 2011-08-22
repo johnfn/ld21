@@ -612,7 +612,7 @@ class UpKeys:
 
 class Dialog:
   all_dialog = { (0, 0)    : [
-                              ("Narrator", "You are the greatest escape artist. (Press Z to continue)"),
+                              ("Narrator", "You are the greatest escape artist. (Press X to continue)"),
                               ("Narrator", "Ever."), 
                               ("Narrator", "At least that's what you think."), 
                               ("Narrator", "Except some jerks trapped you in this big weird looking facility."),
@@ -675,7 +675,7 @@ class Dialog:
 
   @staticmethod
   def update(screen):
-    if UpKeys.key_up(pygame.K_z):
+    if UpKeys.key_up(pygame.K_x):
       if not Dialog.next_dialog():
         return False
 
