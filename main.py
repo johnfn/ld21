@@ -65,6 +65,14 @@ def generic_touching(one, two):
       return True
   return False
 
+# first is boss
+def generic_boss_touching(one, two):
+  four_corners = [Point(x,y) for x in range(one.x, one.x + 33, 16) for y in range(one.y, one.y + 33, 16)]
+  for corner in four_corners:
+    if two.x <= corner.x <= two.x + TILE_SIZE and two.y <= corner.y <= two.y + TILE_SIZE:
+      return True
+  return False
+
 # Does point touch rect?
 def point_touch_rect(pt, rect):
   return rect.x <= pt.x <= rect.x + TILE_SIZE and\
@@ -224,6 +232,9 @@ class Map:
     if rgb_triple == (150, 150, 150): # Signpost 1
       self.current_map.set_at(coords, NOTHING_COLOR)
       Updater.add_updater(Pickup(coords, "signpost1", self.char))
+    if rgb_triple == (200, 200, 200): # Big Bad Boss
+      self.current_map.set_at(coords, NOTHING_COLOR)
+      Updater.add_updater(Boss(coords, self.char, self, self.game))
 
   #got to update with abs
   def update_map(self, x, y, pos_abs=False):
@@ -277,7 +288,8 @@ class Map:
     elif data_piece == (0,0,0):
       return TileSheet.get("wall.png", 1, 0)
 
-  def __init__(self, file_name, coords, char):
+  def __init__(self, file_name, coords, char, game):
+    self.game = game
     self.char = char
     self.file_name = file_name
     self.map_coords = coords
@@ -357,6 +369,10 @@ class Character:
     return (self.x <= item.x <= self.x + TILE_SIZE or self.x <= item.x + TILE_SIZE/2 <= self.x + TILE_SIZE) and\
            (self.y <= item.y <= self.y + TILE_SIZE or self.y <= item.y + TILE_SIZE/2 <= self.y + TILE_SIZE)
 
+  @staticmethod
+  def touching_wall_only(x, y, game_map, uid=-1):
+    return or_fn([game_map.is_wall(*pos) for pos in get_touching(x, y)])
+  
   # doesn't make sense for this to be a static method of character. Oh well.
   @staticmethod
   def touching_wall(x, y, game_map, uid=-1):
@@ -857,14 +873,19 @@ class Pickup:
 
 # One of your dead bodies.
 class Replicated:
-  def __init__(self, coords, game_map, char):
+  def __init__(self, coords, game_map, char, actually_bomb = False):
+    self.actually_bomb = actually_bomb
     self.char = char
     self.coords = coords
     self.game_map = game_map
     self.x, self.y = coords
 
     self.vy = 0
-    self.sprite = Image("wall.png", 2, 2, self.x, self.y) # your dead body
+    if actually_bomb:
+      self.sprite = Image("wall.png", 4, 0, self.x, self.y) # zomg itsa bomb
+    else:
+      self.sprite = Image("wall.png", 2, 2, self.x, self.y) # your dead body
+
     self.age = 0
     self.visible = True
     self.uid = random.random() # about 80 bits of entropy. We should be fine... I hope
@@ -888,6 +909,10 @@ class Replicated:
     for y in range(self.vy):
       self.y += 1
       if Character.touching_wall(self.x, self.y, self.game_map, self.uid) or generic_touching(self, self.char):
+        if generic_touching(self, self.char) and self.actually_bomb:
+          self.char.hurt(1, "enemy", self.game_map)
+          return False
+
         self.y -= 1
         self.vy = 0
         if not self.on_ground:
@@ -899,10 +924,18 @@ class Replicated:
         self.on_ground = False
 
     enemy_deaths = Updater.get_all(lambda obj: isinstance(obj, Enemy) and generic_touching(self, obj))
+    boss_hits = []
+    if not self.actually_bomb:
+      boss_hits = Updater.get_all(lambda obj: isinstance(obj, Boss) and generic_touching(self, obj))
 
     for enemy in enemy_deaths:
       enemy.damage(1)
-      self.age = 150 #TODO: Nice animation?
+      self.age = 150
+
+    #Dumb.
+    for boss in boss_hits:
+      boss.damage(1)
+      self.age = 150
 
     # finally
     self.sprite.move(self.x, self.y)
@@ -933,6 +966,88 @@ class Stairs:
 
   def render(self, screen):
     self.sprite.render(screen)
+
+class Boss:
+  def __init__(self, coords, char, game_map, game):
+    # Tweakable
+    if DEBUG:
+      self.health = 2
+    else:
+      self.health = 4
+
+    self.game = game
+    self.game_map = game_map
+    self.flicker_ticker = 0
+    self.char = char
+    self.visible = True
+    new_coords = [coords[0] * TILE_SIZE, coords[1] * TILE_SIZE]
+    self.x = new_coords[0]
+    self.y = new_coords[1]
+    
+    self.sprite = Image("wall.png", 3, 4, self.x, self.y)
+
+    self.dotime = 120
+    self.timeticker = 0
+    self.order = 0
+    self.orders = [ {'move': Point( 1, 0), 'time': self.dotime}
+                  , {'move': Point( 0, 0), 'time': 8, 'special' : 'drop'}
+                  , {'move': Point( 0,-5), 'time': 8}
+                  , {'move': Point( 0, 5), 'time': 8}
+                  , {'move': Point(-1, 0), 'time': self.dotime}
+                  , {'move': Point( 0, 0), 'time': 8, 'special' : 'drop'}
+                  , {'move': Point( 0,-5), 'time': 8}
+                  , {'move': Point( 0, 5), 'time': 8}
+                  ]
+    self.dropped_places = []
+
+  def damage(self, amt):
+    self.health -= amt
+
+    if self.health <= 0:
+      self.game.set_state(States.GameOver)
+
+    self.flicker_ticker = 50
+
+  def depth(self):
+    return 0
+
+  def update(self):
+    curr = self.orders[self.order]
+
+    if 'special' in curr and curr['special'] == 'drop':
+      new_place = 20 * int(1 + random.random() * 18)
+      while new_place in self.dropped_places:
+        new_place = 21 * int(1 + random.random() * 17)
+
+      Updater.add_updater(Replicated((new_place, 40), self.game_map, self.char, True))
+    else:
+      self.dropped_places = []
+
+    self.timeticker += 1
+
+    if generic_boss_touching(self, self.char):
+      self.char.hurt(1, "enemy", self.game_map)
+
+    if self.timeticker > self.orders[self.order]['time']:
+      self.order = ((self.order + 1) % len(self.orders))
+      self.timeticker = 0
+
+    self.x += self.orders[self.order]['move'].x
+    self.y += self.orders[self.order]['move'].y
+
+    self.sprite.move(self.x, self.y)
+
+    if self.flicker_ticker > 0:
+      self.visible = (self.flicker_ticker % 3 == 0)
+      self.flicker_ticker -= 1
+    else:
+      self.visible = True
+
+    return True
+
+  def render(self, screen):
+    if self.visible:
+      self.sprite.render(screen, 2)
 
 class Enemy:
   # Example: {move: [1, 0], time: 60}, {move: [-1, 0], time: 60}
@@ -1195,10 +1310,10 @@ class Game:
     Dialog.begin(self)
 
     if DEBUG:
-      self.map = Map("map.png", [0, 2], self.char)
+      self.map = Map("map.png", [5, 1], self.char, self)
       self.state = States.Normal
     else:
-      self.map = Map("map.png", [0, 0], self.char)
+      self.map = Map("map.png", [0, 0], self.char, self)
       self.state = States.Dialog
       Dialog.start_dialog((0, 0))
 
@@ -1280,10 +1395,13 @@ class Game:
         my_font = pygame.font.Font(None, 14)
         elapsed = "%d minutes, %d seconds." % (int((self.finished_time - START_TIME)/60), int(self.finished_time - START_TIME) % 60)
         gameover = """
-        You win!
+        Hooray! You win!
 
+        Afterwards:
 
+        Even though you beat their boss, killed all their personel, and stole their gold, MegaCorp has come to the conclusion that you must be dead, because they found thousands of your dead bodies littering their dungeons. 
 
+        Not a bad way for things to end up.
 
 
 
