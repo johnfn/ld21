@@ -11,11 +11,11 @@ Hopefully coming in the next 10 hours.
 Mac OSX
 -----------------
 
-** Installable package **
+**Installable package**
 
 Hopefully coming in the next 10 hours.
 
-** From source **
+**From source**
 
 Install macports if you don't already have it: http://www.macports.org/
 
@@ -34,11 +34,11 @@ Run: `python26 main.py`
 Ubuntu
 -----------------
 
-** Installable package **
+**Installable package**
 
 Hopefully coming in the next 10 hours.
 
-** From source **
+**From source**
 
 Hop in a terminal and type in the following.
 
