@@ -1,6 +1,8 @@
 Escape Artist
 ====================
 
+Installation instructions.
+
 Windows
 -----------------
 
@@ -32,3 +34,5 @@ Hop in a terminal and type in the following.
 *Play!*
 
 `$ cd ld21`
+
+`$ python main.py`
