@@ -420,7 +420,7 @@ class Character:
     self.vy += 1
     if on_stairs:
       # Disregard all physics. YOU ARE SUPERMAN.
-      self.vy = (keys[pygame.K_s] - keys[pygame.K_w]) * self.speed
+      self.vy = (keys[pygame.K_DOWN] - keys[pygame.K_UP]) * self.speed
 
       if self.vy != 0:
         self.anim_ticker += 1
@@ -431,14 +431,14 @@ class Character:
 
     jumping = False
 
-    if keys[pygame.K_SPACE] and self.on_ground:
+    if keys[pygame.K_z] and self.on_ground:
       jumping = True
       self.vy = -self.jump_height
 
     # A bit of a hack to correct for speedy falling (where you fall through blocks).
     if self.vy > TILE_SIZE: self.vy = TILE_SIZE * sign(self.vy)
 
-    dx = (keys[pygame.K_d] - keys[pygame.K_a]) * self.speed + self.vx
+    dx = (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * self.speed + self.vx
     dy =                                                    + self.vy
 
     if dx != 0:
@@ -490,7 +490,7 @@ class Character:
     target = Updater.get_escape(self)
     if target is None: 
       # No escaper found in this map.
-      if UpKeys.key_up(27) or UpKeys.key_up(pygame.K_RSHIFT) or UpKeys.key_up(pygame.K_LSHIFT):
+      if UpKeys.key_up(27) or UpKeys.key_up(pygame.K_x) or UpKeys.key_up(pygame.K_x):
         Updater.add_updater(HoverText("I can't without a target.", self, 0))
       return
 
@@ -498,7 +498,7 @@ class Character:
 
     # Flip code. Probably should move to new function
     self.ghost.move(flipped_x, self.y)
-    if UpKeys.key_up(27) or UpKeys.key_up(pygame.K_RSHIFT) or UpKeys.key_up(pygame.K_LSHIFT):
+    if UpKeys.key_up(27) or UpKeys.key_up(pygame.K_x) or UpKeys.key_up(pygame.K_x):
       if abs(flipped_x - self.x) < TILE_SIZE + 1 and self.has_replicator():
         Updater.add_updater(HoverText("My own dead body would kill me!", self, 0))
         return
@@ -609,16 +609,16 @@ class UpKeys:
 
 class Dialog:
   all_dialog = { (0, 0)    : [
-                              ("Narrator", "You are the greatest escape artist."),
+                              ("Narrator", "You are the greatest escape artist. (Press Z to continue)"),
                               ("Narrator", "Ever."), 
                               ("Narrator", "At least that's what you think."), 
                               ("Narrator", "Except some jerks trapped you in this big weird looking facility."),
                               ("Narrator", "And you want to escape."),
                               ("Narrator", "You have one special talent though."),
-                              ("Narrator", "If the room has a glowing target in it (like this one conveniently does) then you can press ESC and teleport."),
-                              ("Narrator", "(ESC is sometimes inconvenient, so try Shift too)"),
+                              ("Narrator", "If the room has a glowing target in it (like this one conveniently does) then you can press ESC and teleport around it."),
+                              ("Narrator", "(ESC is sometimes inconvenient, so try X too)"),
                               ("Narrator", "Try it out. You'll get the gist pretty fast, I bet."),
-                              ("Narrator", "By the way: Move around with WASD, jump with Space."),
+                              ("Narrator", "By the way: Move around with arrows, jump with Z."),
                              ],
                  (2, 0)    : [
                               ("Narrator", "That guy looks annoying."),
@@ -667,7 +667,7 @@ class Dialog:
 
   @staticmethod
   def update(screen):
-    if UpKeys.key_up(pygame.K_SPACE):
+    if UpKeys.key_up(pygame.K_z):
       if not Dialog.next_dialog():
         return False
 
