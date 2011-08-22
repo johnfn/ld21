@@ -1073,6 +1073,8 @@ class Boss:
     return True
 
   def render(self, screen):
+    self.sprite.move(self.x, self.y)
+
     if self.visible:
       self.sprite.render(screen, 2)
 
