@@ -1340,7 +1340,7 @@ class Game:
     TileSheet.add("particle.png")
 
     if DEBUG:
-      self.char = Character(120, 40)
+      self.char = Character(120, 38)
     else:
       self.char = Character(40, 40)
 
