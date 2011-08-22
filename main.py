@@ -26,6 +26,7 @@ background = None
 # sound fx
 
 land_sound = None
+get_sound = None
 escape_sound = None
 
 # Following 2 methods found online.
@@ -562,6 +563,8 @@ class Character:
     game_map.update_map(self.res_death['mx'], self.res_death['my'], True)
 
     Updater.remove_all(lambda x: isinstance(x, HoverText))
+    Updater.remove_all(lambda x: isinstance(x, Replicated))
+    Updater.remove_all(lambda x: isinstance(x, Boss))
 
   def set_restore_point(self):
     self.restore_x = self.x
@@ -619,8 +622,15 @@ class Dialog:
                              ],
                  (2, 0)    : [
                               ("Narrator", "That guy looks annoying."),
-                              ("Narrator", "Fortunately you have perfect perception of him (from your escape artist powers)."),
-                              ("Narrator", "This ability is really helpful. Believe me."),
+                              ("Narrator", "Since you are the greatest escape artist, you don't even want to be seen by him."),
+                              ("Narrator", "(His line of sight is indicated by the circles)"),
+                             ],
+                 (4, 1)    : [
+                              ("Narrator", "Aha!"),
+                              ("Narrator", "To the right, my sensors are indicating there is..."),
+                              ("Narrator", "An ESCAPE!"),
+                              ("Narrator", "And also a big scary monster in your way."),
+                              ("Narrator", "Well, that stinks"),
                              ],
                  # replicator GET dialog
                  "replicator": [ ("Narrator", "Ooh."),
@@ -862,6 +872,8 @@ class Pickup:
     if self.char.touching_item(self):
       self.char.get_item(self.pickup_type)
       if not self.pickup_type.startswith("signpost"):
+        if not DEBUG:
+          get_sound.play()
         return False
       else:
         return True
@@ -1295,6 +1307,8 @@ class Game:
       global escape_sound
       escape_sound = pygame.mixer.Sound("escape.wav")
 
+      global get_sound
+      get_sound = pygame.mixer.Sound("getstuff.wav")
 
     self.screen = pygame.display.set_mode((ABS_MAP_SIZE * 2, ABS_MAP_SIZE * 2))
     self.buff = pygame.Surface((ABS_MAP_SIZE, ABS_MAP_SIZE))
@@ -1310,7 +1324,7 @@ class Game:
     Dialog.begin(self)
 
     if DEBUG:
-      self.map = Map("map.png", [5, 1], self.char, self)
+      self.map = Map("map.png", [4, 1], self.char, self)
       self.state = States.Normal
     else:
       self.map = Map("map.png", [0, 0], self.char, self)
