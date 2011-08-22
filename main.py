@@ -5,7 +5,7 @@ import random
 import spritesheet
 from wordwrap import render_textrect
 
-DEBUG = True
+DEBUG = False
 
 # constants
 
@@ -233,6 +233,9 @@ class Map:
     if rgb_triple == (150, 150, 150): # Signpost 1
       self.current_map.set_at(coords, NOTHING_COLOR)
       Updater.add_updater(Pickup(coords, "signpost1", self.char))
+    if rgb_triple == (151, 150, 150): # Signpost 2
+      self.current_map.set_at(coords, NOTHING_COLOR)
+      Updater.add_updater(Pickup(coords, "signpost2", self.char))
     if rgb_triple == (200, 200, 200): # Big Bad Boss
       self.current_map.set_at(coords, NOTHING_COLOR)
       Updater.add_updater(Boss(coords, self.char, self, self.game))
@@ -431,7 +434,7 @@ class Character:
 
     jumping = False
 
-    if keys[pygame.K_z] and self.on_ground:
+    if keys[pygame.K_x] and self.on_ground:
       jumping = True
       self.vy = -self.jump_height
 
@@ -490,7 +493,7 @@ class Character:
     target = Updater.get_escape(self)
     if target is None: 
       # No escaper found in this map.
-      if UpKeys.key_up(27) or UpKeys.key_up(pygame.K_x) or UpKeys.key_up(pygame.K_x):
+      if UpKeys.key_up(27) or UpKeys.key_up(pygame.K_z):
         Updater.add_updater(HoverText("I can't without a target.", self, 0))
       return
 
@@ -498,7 +501,7 @@ class Character:
 
     # Flip code. Probably should move to new function
     self.ghost.move(flipped_x, self.y)
-    if UpKeys.key_up(27) or UpKeys.key_up(pygame.K_x) or UpKeys.key_up(pygame.K_x):
+    if UpKeys.key_up(27) or UpKeys.key_up(pygame.K_z):
       if abs(flipped_x - self.x) < TILE_SIZE + 1 and self.has_replicator():
         Updater.add_updater(HoverText("My own dead body would kill me!", self, 0))
         return
@@ -616,9 +619,9 @@ class Dialog:
                               ("Narrator", "And you want to escape."),
                               ("Narrator", "You have one special talent though."),
                               ("Narrator", "If the room has a glowing target in it (like this one conveniently does) then you can press ESC and teleport around it."),
-                              ("Narrator", "(ESC is sometimes inconvenient, so try X too)"),
+                              ("Narrator", "(Z works too. ESC is sometimes inconvenient.)"),
                               ("Narrator", "Try it out. You'll get the gist pretty fast, I bet."),
-                              ("Narrator", "By the way: Move around with arrows, jump with Z."),
+                              ("Narrator", "By the way: Move around with arrows, jump with X."),
                              ],
                  (2, 0)    : [
                               ("Narrator", "That guy looks annoying."),
@@ -655,6 +658,11 @@ class Dialog:
                  "signpost1": [ ("Narrator", "Hmm..."),
                                 ("Narrator", "The sign reads: "),
                                 ("Narrator", "Right: ESCAPE. Left: Certain death. Down: Even more certain death."),
+                              ],
+                 "signpost2": [ ("Narrator", "Hmm..."),
+                                ("Narrator", "The sign reads: "),
+                                ("Narrator", "HAHA! Now you're trapped... FOREVER!"),
+                                ("Narrator", "...Great."),
                               ],
                               }
   speaker = ""
@@ -998,7 +1006,7 @@ class Boss:
     
     self.sprite = Image("wall.png", 3, 4, self.x, self.y)
 
-    self.dotime = 120
+    self.dotime = 300
     self.timeticker = 0
     self.order = 0
     self.orders = [ {'move': Point( 1, 0), 'time': self.dotime}
@@ -1324,7 +1332,7 @@ class Game:
     Dialog.begin(self)
 
     if DEBUG:
-      self.map = Map("map.png", [4, 1], self.char, self)
+      self.map = Map("map.png", [2, 3], self.char, self)
       self.state = States.Normal
     else:
       self.map = Map("map.png", [0, 0], self.char, self)
