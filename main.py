@@ -707,11 +707,11 @@ class Dialog:
 
   @staticmethod
   def show_dialog(screen):
-    my_font = pygame.font.Font(None, 15)
+    my_font = pygame.font.Font("freesansbold.ttf", 10)
 
     speaker, dialog = Dialog.all_dialog[Dialog.speaker][Dialog.position]
 
-    my_rect = pygame.Rect((60, ABS_MAP_SIZE - 100, 300, 40))
+    my_rect = pygame.Rect((60, ABS_MAP_SIZE - 140, 300, 120))
     rendered_text = render_textrect(dialog, my_font, my_rect, (10, 10, 10), (210, 255, 255), True, 0)
 
     screen.blit(rendered_text, my_rect.topleft)
@@ -1205,9 +1205,9 @@ class HoverText:
   def render(self, screen):
     my_width = 100
 
-    my_font = pygame.font.Font(None, 14)
+    my_font = pygame.font.Font("freesansbold.ttf", 10)
 
-    my_rect = pygame.Rect((self.follow.x - my_width / 2, self.follow.y - len(self.text), my_width, 30))
+    my_rect = pygame.Rect((self.follow.x - my_width / 2, self.follow.y - len(self.text) - 30, my_width, 70))
     if my_rect.x < 0:
       my_rect.x = 0
     rendered_text = render_textrect(self.text, my_font, my_rect, (10, 10, 10), (255, 255, 255), False, 1)
@@ -1429,7 +1429,7 @@ class Game:
           self.set_state(States.Normal)
       elif self.state == States.GameOver:
 
-        my_font = pygame.font.Font(None, 14)
+        my_font = pygame.font.Font("freesansbold.ttf", 10)
         elapsed = "%d minutes, %d seconds." % (int((self.finished_time - START_TIME)/60), int(self.finished_time - START_TIME) % 60)
         gameover = """
         Hooray! You win!
@@ -1439,8 +1439,6 @@ class Game:
         Even though you beat their boss, killed all their personel, and stole their gold, MegaCorp has come to the conclusion that you must be dead, because they found thousands of your dead bodies littering their dungeons. 
 
         Not a bad way for things to end up.
-
-
 
         elapsed time: %s
 

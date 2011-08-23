@@ -1,0 +1,3 @@
+#!/bin/bash
+
+python setup.py py2app --resources=background.png,baws.png,escape.wav,getstuff.wav,land.wav,ludumherp.mp3,map.png,particle.png,wall.png,freesansbold.ttf
