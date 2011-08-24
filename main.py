@@ -545,6 +545,14 @@ class Character:
 
       self.x = self.restore_x
       self.y = self.restore_y
+ 
+      while Character.touching_wall(self.x, self.y, game_map):
+        self.y -= 1
+        if self.y < 0:
+				  # The only possibility now is someone is trying to screw with us.
+          while Character.touching_wall(self.x, self.y, game_map):
+            self.x = random.random() * ABS_MAP_SIZE
+            self.y = random.random() * ABS_MAP_SIZE
 
       self.vx = 0
       self.vy = 0
@@ -1347,7 +1355,7 @@ class Game:
     Dialog.begin(self)
 
     if DEBUG:
-      self.map = Map("map.png", [2, 1], self.char, self)
+      self.map = Map("map.png", [2, 3], self.char, self)
       self.state = States.Normal
     else:
       self.map = Map("map.png", [0, 0], self.char, self)
