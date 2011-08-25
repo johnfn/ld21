@@ -9,6 +9,8 @@ DEBUG = False
 
 # constants
 
+GAME_SIZE = 2
+
 WALLS = [(0,0,0)]
 TILE_SIZE = 20
 MAP_SIZE = 20
@@ -549,7 +551,7 @@ class Character:
       while Character.touching_wall(self.x, self.y, game_map):
         self.y -= 1
         if self.y < 0:
-				  # The only possibility now is someone is trying to screw with us.
+          # The only possibility now is someone is trying to screw with us.
           while Character.touching_wall(self.x, self.y, game_map):
             self.x = random.random() * ABS_MAP_SIZE
             self.y = random.random() * ABS_MAP_SIZE
@@ -1394,10 +1396,17 @@ class Game:
           exit(0)
         if event.type == pygame.KEYUP:
           UpKeys.add_key(event.key)
-      
+
       global background
       background.render(self.buff)
       self.map.render(self.buff)
+
+      global GAME_SIZE
+      if UpKeys.key_up(pygame.K_s):
+        if GAME_SIZE == 2:
+          GAME_SIZE = 1
+        else: 
+          GAME_SIZE = 2
 
       if self.state == States.Dialog:
         Updater.render_all(self.buff)
@@ -1457,7 +1466,12 @@ class Game:
         my_rect = self.buff.get_rect()
         self.buff = render_textrect(gameover, my_font, my_rect, (10, 10, 10), (210, 255, 255), True, 0)
 
-      self.screen.blit(pygame.transform.scale(self.buff, (ABS_MAP_SIZE * 2, ABS_MAP_SIZE * 2)), self.buff.get_rect())
+      blackness2 = pygame.Surface((ABS_MAP_SIZE * 2, ABS_MAP_SIZE * 2))
+      blackness2.set_alpha(255)
+      self.screen.blit(blackness2, blackness2.get_rect())
+
+
+      self.screen.blit(pygame.transform.scale(self.buff, (ABS_MAP_SIZE * GAME_SIZE, ABS_MAP_SIZE * GAME_SIZE)), self.buff.get_rect())
       UpKeys.flush()
       time.sleep(.02)
       pygame.display.flip()
