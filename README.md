@@ -1,6 +1,10 @@
 Escape Artist
 ====================
 
+My entry for Ludum Dare 21, a 48 hour game development competition. 
+
+The link to its official page is here: http://www.ludumdare.com/compo/ludum-dare-21/?action=preview&uid=3187
+
 Installation instructions.
 
 Windows
@@ -15,10 +19,6 @@ http://stanford.edu/~grantm/escape-artist-mac.zip
 
 Ubuntu
 -----------------
-
-**Installable package**
-
-Hopefully coming in the next 10 hours.
 
 **From source**
 
